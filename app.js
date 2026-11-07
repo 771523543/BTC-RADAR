@@ -31,14 +31,14 @@ const recent=c.slice(-120), highs=recent.map(x=>x.high),lows=recent.map(x=>x.low
 const pivotData=recent.slice(0,-6), pivotHigh=localExtremes(pivotData.map(x=>x.high),true),pivotLow=localExtremes(pivotData.map(x=>x.low),false);
 const resist=pivotHigh.filter(x=>x>price).sort((x,y)=>x-y),support=pivotLow.filter(x=>x<price).sort((x,y)=>y-x);
 const fallbackR=highs.filter(x=>x>price).sort((x,y)=>x-y),fallbackS=lows.filter(x=>x<price).sort((x,y)=>y-x);
-const resistance=resist[0]??fallbackR[0]??null,support1=support[0]??fallbackS[0]??null;
+const resistance=resist[0]??fallbackR[0]??null,support1=support[0]??fallbackS[0]??null;const bullTestLevel=resistance??pivotHigh.filter(x=>x<=price).sort((x,y)=>y-x)[0]??null,bearTestLevel=support1??pivotLow.filter(x=>x>=price).sort((x,y)=>x-y)[0]??null;
 const tr=[];for(let i=1;i<c.length;i++)tr.push(Math.max(c[i].high-c[i].low,Math.abs(c[i].high-c[i-1].close),Math.abs(c[i].low-c[i-1].close)));
 const atr=tr.slice(-14).reduce((x,y)=>x+y,0)/Math.max(1,tr.slice(-14).length);
 const last=c.at(-1),prev=c.at(-2),avgVol=c.slice(-21,-1).reduce((x,y)=>x+y.volume,0)/20,volRatio=avgVol?last.volume/avgVol:0;
 const tol=Math.max(atr*.2,price*.0005),buffer=Math.max(atr*.1,price*.0003);
 let bullRetest=false,bearRetest=false,bullBreak=false,bearBreak=false;
-if(resistance){for(let i=Math.max(1,c.length-7);i<c.length;i++){const bar=c[i],before=c[i-1];if(before.close<=resistance&&bar.close>resistance+buffer&&bar.volume>avgVol*1.15)bullBreak=true;if(i>=2&&c[i-2].close>resistance+buffer&&bar.low<=resistance+tol&&bar.close>resistance&&bar.close>bar.open)bullRetest=true;}}
-if(support1){for(let i=Math.max(1,c.length-7);i<c.length;i++){const bar=c[i],before=c[i-1];if(before.close>=support1&&bar.close<support1-buffer&&bar.volume>avgVol*1.15)bearBreak=true;if(i>=2&&c[i-2].close<support1-buffer&&bar.high>=support1-tol&&bar.close<support1&&bar.close<bar.open)bearRetest=true;}}
+if(bullTestLevel!=null){for(let i=Math.max(1,c.length-7);i<c.length;i++){const bar=c[i],before=c[i-1];if(before.close<=bullTestLevel&&bar.close>bullTestLevel+buffer&&bar.volume>avgVol*1.15)bullBreak=true;if(i>=2&&c[i-2].close>bullTestLevel+buffer&&bar.low<=bullTestLevel+tol&&bar.close>bullTestLevel&&bar.close>bar.open)bullRetest=true;}}
+if(bearTestLevel!=null){for(let i=Math.max(1,c.length-7);i<c.length;i++){const bar=c[i],before=c[i-1];if(before.close>=bearTestLevel&&bar.close<bearTestLevel-buffer&&bar.volume>avgVol*1.15)bearBreak=true;if(i>=2&&c[i-2].close<bearTestLevel-buffer&&bar.high>=bearTestLevel-tol&&bar.close<bearTestLevel&&bar.close<bar.open)bearRetest=true;}}
 const confirm=bullRetest?'إعادة اختبار صاعدة محتملة':bearRetest?'إعادة اختبار هابطة محتملة':bullBreak?'إغلاق اختراق صاعد مع حجم أعلى من المتوسط':bearBreak?'إغلاق كسر هابط مع حجم أعلى من المتوسط':'لا يوجد اختراق مؤكد بشروط الرادار';
 setText('confirmationStatus',confirm);setText('closedCandleValue',fmtPrice(last.close));setText('volumeRatioValue',fmt(volRatio,2)+'×');setText('atrValue',fmtPrice(atr));
 const signalTitle=bullRetest?'إعادة اختبار صاعدة — راقب الثبات':bearRetest?'إعادة اختبار هابطة — راقب الثبات':bullBreak?'اختراق صاعد أولي — انتظر إعادة الاختبار':bearBreak?'كسر هابط أولي — انتظر إعادة الاختبار':'انتظار — لا توجد إشارة مؤكدة';
