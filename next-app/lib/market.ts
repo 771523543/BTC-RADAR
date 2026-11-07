@@ -67,22 +67,49 @@ function frameLevels(candles: Candle[], frame: string, tolerance: number): Level
   return groups;
 }
 export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], price: number, currentFrame: string = "15m") {
-  const baseAtr = atr(current.filter(x => x.closeTime < Date.now()).slice(-240));
-  const tolerance = Math.max(baseAtr * .35, price * .0008);
-  const all = [...frameLevels(current, currentFrame, tolerance), ...frameLevels(h1, "1h", tolerance), ...frameLevels(h4, "4h", tolerance)].sort((a, b) => a.price - b.price);
+  const closed = (items: Candle[]) => items.filter(x => x.closeTime < Date.now()).slice(-240);
+  const currentClosed = closed(current);
+  const baseAtr = atr(currentClosed);
+  const priceFloor = price > 0 ? price * 0.0008 : 0;
+  // Each timeframe gets its own volatility tolerance. Reusing the 5m/15m ATR
+  // for 1h and 4h used to make higher-timeframe zones too narrow or too wide.
+  const toleranceFor = (items: Candle[]) => Math.max(atr(closed(items)) * 0.35, priceFloor);
+  const currentTolerance = toleranceFor(current);
+  const h1Tolerance = toleranceFor(h1);
+  const h4Tolerance = toleranceFor(h4);
+  const all = [
+    ...frameLevels(current, currentFrame, currentTolerance),
+    ...frameLevels(h1, "1h", h1Tolerance),
+    ...frameLevels(h4, "4h", h4Tolerance),
+  ].sort((a, b) => a.price - b.price);
+
+  // Merge only nearby zones, using a conservative cross-timeframe tolerance.
+  const mergeTolerance = Math.max(price > 0 ? price * 0.00045 : 0, Math.min(currentTolerance, h1Tolerance, h4Tolerance) * 0.8);
   const merged: Level[] = [];
   for (const item of all) {
-    const found = merged.find(x => x.side === item.side && Math.abs(x.price - item.price) <= tolerance);
+    const found = merged.find(x => x.side === item.side && Math.abs(x.price - item.price) <= mergeTolerance);
     if (!found) merged.push({ ...item });
-    else { found.price = (found.price * found.touches + item.price * item.touches) / (found.touches + item.touches); found.touches += item.touches; if (!found.timeframes.includes(item.timeframes[0])) found.timeframes.push(item.timeframes[0]); }
+    else {
+      const totalTouches = found.touches + item.touches;
+      found.price = (found.price * found.touches + item.price * item.touches) / totalTouches;
+      found.touches = totalTouches;
+      if (!found.timeframes.includes(item.timeframes[0])) found.timeframes.push(item.timeframes[0]);
+    }
   }
-  merged.forEach(x => { x.lower = x.price - tolerance * .45; x.upper = x.price + tolerance * .45; x.strength = x.touches >= 7 ? "قوية" : x.touches >= 3 ? "متوسطة" : "مراقبة"; x.flipped = (x.side === "support" && x.price > price) || (x.side === "resistance" && x.price < price); });
+  merged.forEach(x => {
+    const zoneTolerance = Math.max(currentTolerance, ...x.timeframes.map(tf => tf === "4h" ? h4Tolerance : tf === "1h" ? h1Tolerance : currentTolerance));
+    x.lower = x.price - zoneTolerance * 0.45;
+    x.upper = x.price + zoneTolerance * 0.45;
+    // A level gains weight from repeated reactions and agreement across frames.
+    const frameBonus = x.timeframes.length >= 3 ? 2 : x.timeframes.length === 2 ? 1 : 0;
+    const score = x.touches + frameBonus;
+    x.strength = score >= 9 ? "قوية" : score >= 4 ? "متوسطة" : "مراقبة";
+    x.flipped = (x.side === "support" && x.price > price) || (x.side === "resistance" && x.price < price);
+  });
   return {
     all: merged,
-    // Display levels by their current position relative to price, while keeping
-    // the original pivot side in `all` for breakout / breakdown detection.
-    // This makes a broken resistance appear as support, and a broken support
-    // appear as resistance, without losing the original level identity.
+    // Show the nearest zones on each side of the live price, while preserving
+    // each pivot's original identity for breakout/breakdown event detection.
     resistance: merged.filter(x => x.price > price).sort((a, b) => a.price - b.price).slice(0, 4),
     support: merged.filter(x => x.price < price).sort((a, b) => b.price - a.price).slice(0, 4),
     atr: baseAtr,
