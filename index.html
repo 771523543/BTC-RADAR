@@ -117,6 +117,12 @@
             <div><span class="scenario-label bullish">سيناريو إيجابي</span><b id="bullTrigger">—</b><p id="bullText">راقب إغلاقًا أعلى المقاومة ثم إعادة اختبار ناجحة.</p></div>
             <div><span class="scenario-label bearish">سيناريو سلبي</span><b id="bearTrigger">—</b><p id="bearText">راقب إغلاقًا أسفل الدعم ثم إعادة اختبار فاشلة.</p></div>
           </div>
+          <div class="confirmation-grid">
+            <div><span>حالة التأكيد</span><b id="confirmationStatus">بانتظار البيانات</b></div>
+            <div><span>آخر إغلاق مكتمل</span><b id="closedCandleValue">—</b></div>
+            <div><span>حجم التداول / متوسط 20 شمعة</span><b id="volumeRatioValue">—</b></div>
+            <div><span>متوسط المدى الحقيقي ATR 14</span><b id="atrValue">—</b></div>
+          </div>
           <div class="rule-note"><b>قاعدة الرادار:</b> لا تعتبر اختراقًا حقيقيًا بمجرد لمس المستوى. انتظر إغلاق الشمعة، ثم راقب إعادة الاختبار وحجم التداول. إذا لم تتوفر الشروط فالقرار هو الانتظار.</div>
         </article>
 
@@ -127,7 +133,7 @@
             <label>المخاطرة لكل صفقة (%)<input id="riskInput" type="number" min="0.1" max="5" step="0.1" value="0.5"></label>
             <label>المسافة إلى وقف الخسارة (%)<input id="stopInput" type="number" min="0.1" max="50" step="0.1" value="1"></label>
           </div>
-          <div class="risk-results"><div><span>المبلغ المعرض للخطر</span><b id="riskAmount">$50.00</b></div><div><span>حجم المركز التقريبي</span><b id="positionSize">$5,000.00</b></div></div>
+          <div class="risk-results"><div><span>المبلغ المعرض للخطر</span><b id="riskAmount">$50.00</b></div><div><span>حجم المركز التقريبي</span><b id="positionSize">$5,000.00</b><small id="riskQuantity">— BTC</small></div></div><p class="footnote" id="riskCapNote">الحجم لا يتجاوز رأس المال المدخل.</p>
           <p class="footnote">الحاسبة لا تضيف الرسوم أو الانزلاق السعري أو التمويل. حجم المركز ليس توصية باستخدام الرافعة. التزم بوقف الخسارة المحدد مسبقًا.</p>
         </article>
       </section>
