@@ -1,5 +1,5 @@
 export type Market = "spot" | "futures";
-export type Interval = "5m" | "15m" | "1h" | "4h" | "1d";
+export type Interval = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
 export type Candle = { time: number; closeTime: number; open: number; high: number; low: number; close: number; volume: number };
 export type Level = { price: number; side: "support" | "resistance"; touches: number; timeframes: string[]; strength: string; lower: number; upper: number; flipped: boolean };
 
