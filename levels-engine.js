@@ -20,8 +20,7 @@ function levelsFor(candles,price,tf,baseAtr){
   if(!g.timeframes.includes(tf))g.timeframes.push(tf);
  });
  for(const g of groups){
-  const hits=c.filter(x=>x.high>=g.price-tol*.55&&x.low<=g.price+tol*.55);
-  g.touches=Math.max(g.points.length,new Set(hits.map(x=>Math.floor(x.time/(tf==='4h'?14400000:tf==='1h'?3600000:1)))).size);
+  const hitIndexes=[];c.forEach((x,i)=>{if(x.high>=g.price-tol*.55&&x.low<=g.price+tol*.55)hitIndexes.push(i);});let hitGroups=0,lastHit=-10;hitIndexes.forEach(i=>{if(i-lastHit>2)hitGroups++;lastHit=i;});g.touches=Math.max(g.points.length,hitGroups);
   g.lower=g.price-tol*.45;g.upper=g.price+tol*.45;
   g.score=g.touches*(tf==='4h'?3:tf==='1h'?2:1);
   g.atr=atr;
@@ -45,8 +44,9 @@ window.BTCRadarLevels={
   return this.pack(merged,price,base);
  },
  pack:function(all,price,atr){
-  const resistance=all.filter(x=>x.side==='resistance'&&x.price>price).sort((a,b)=>a.price-b.price).slice(0,4);
-  const support=all.filter(x=>x.side==='support'&&x.price<price).sort((a,b)=>b.price-a.price).slice(0,4);
+  const classified=all.map(x=>{const newSide=x.price>price?'resistance':'support';return{...x,originalSide:x.side,flipped:x.side!==newSide,side:newSide};});
+  const resistance=classified.filter(x=>x.price>price).sort((a,b)=>a.price-b.price).slice(0,4);
+  const support=classified.filter(x=>x.price<price).sort((a,b)=>b.price-a.price).slice(0,4);
   return{resistance,support,all,atr,tolerance:Math.max(atr*.35,price*.0008),referencePrice:price};
  }
 };
