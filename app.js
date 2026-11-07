@@ -5,7 +5,23 @@ const state = { market:'spot', interval:'15m', candles:[], ticker:null, ws:null,
 const fmt = (n, digits=2) => Number.isFinite(Number(n)) ? Number(n).toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits}) : '—';
 const compact = n => { n=Number(n); if(!Number.isFinite(n)) return '—'; if(Math.abs(n)>=1e9)return (n/1e9).toFixed(2)+'B';if(Math.abs(n)>=1e6)return (n/1e6).toFixed(2)+'M';if(Math.abs(n)>=1e3)return (n/1e3).toFixed(2)+'K';return fmt(n,2); };
 const api = (path, futures=state.market==='futures') => (futures?'https://fapi.binance.com':'https://api.binance.com')+path;
-async function getJSON(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
+async function getJSON(url){
+  const parsed=new URL(url),path=parsed.pathname+parsed.search;
+  const hosts=parsed.hostname==='api.binance.com'
+    ? ['data-api.binance.vision','api1.binance.com','api2.binance.com','api3.binance.com','api4.binance.com']
+    : parsed.hostname==='fapi.binance.com'
+      ? ['fapi.binance.com','fapi1.binance.com','fapi2.binance.com','fapi3.binance.com']
+      : [parsed.hostname];
+  let lastError;
+  for(const host of hosts){
+    try{
+      const response=await fetch(parsed.protocol+'//'+host+path,{cache:'no-store',mode:'cors'});
+      if(!response.ok)throw new Error(host+' HTTP '+response.status);
+      return await response.json();
+    }catch(error){lastError=error;console.warn('Binance endpoint failed:',host,error);}
+  }
+  throw lastError||new Error('تعذر الوصول إلى واجهات Binance');
+}
 function setConnection(status,msg){$('connectionDot').parentElement.className='connection '+status;$('connectionText').textContent=msg;}
 function setText(id,v){$(id).textContent=v;}
 function ema(values,period){const k=2/(period+1);let prev=values.slice(0,period).reduce((a,b)=>a+b,0)/period;const out=Array(period-1).fill(null);out.push(prev);for(let i=period;i<values.length;i++){prev=values[i]*k+prev*(1-k);out.push(prev);}return out;}
