@@ -66,10 +66,10 @@ function frameLevels(candles: Candle[], frame: string, tolerance: number): Level
   }
   return groups;
 }
-export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], price: number) {
+export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], price: number, currentFrame: string = "15m") {
   const baseAtr = atr(current.filter(x => x.closeTime < Date.now()).slice(-240));
   const tolerance = Math.max(baseAtr * .35, price * .0008);
-  const all = [...frameLevels(current, "15m", tolerance), ...frameLevels(h1, "1h", tolerance), ...frameLevels(h4, "4h", tolerance)].sort((a, b) => a.price - b.price);
+  const all = [...frameLevels(current, currentFrame, tolerance), ...frameLevels(h1, "1h", tolerance), ...frameLevels(h4, "4h", tolerance)].sort((a, b) => a.price - b.price);
   const merged: Level[] = [];
   for (const item of all) {
     const found = merged.find(x => x.side === item.side && Math.abs(x.price - item.price) <= tolerance);
