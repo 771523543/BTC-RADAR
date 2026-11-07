@@ -33,11 +33,16 @@ export default function SmartChart(){
  useEffect(()=>{
   if(!last||!previous||last.time===lastAnalyzed.current)return;
   lastAnalyzed.current=last.time;
+  const intervalMs:Record<Interval,number>={"5m":300000,"15m":900000,"1h":3600000,"4h":14400000,"1d":86400000};
+  const expired=!!lastBreak&&!lastBreak.retested&&last.time-lastBreak.time>intervalMs[interval]*8;
+  if(expired){addEvent("انتهت متابعة إعادة الاختبار","لم تعد الشموع إلى مستوى الاختراق خلال 8 شموع؛ ستبدأ مراقبة فرص جديدة","warn");setLastBreak(null);}
   const volumeRatio=avgVol?last.volume/avgVol:0;
   setVolumeStatus((volumeRatio>=1.2?"حجم مرتفع":volumeRatio<.8?"حجم منخفض":"حجم قريب من المتوسط")+" · "+fmt(volumeRatio,2)+"x من متوسط 20 شمعة");
   if(volumeRatio>=1.2)addEvent("ارتفاع حجم التداول","الحجم "+fmt(volumeRatio,2)+"x من متوسط آخر 20 شمعة مكتملة","good");
   else if(volumeRatio<.8)addEvent("انخفاض حجم التداول","الحجم "+fmt(volumeRatio,2)+"x من متوسط آخر 20 شمعة مكتملة","warn");
-  if(!lastBreak){
+  // Keep a successful retest visible until the next completed candle,
+  // then resume monitoring; stale setups also stop blocking new signals.
+  if(!lastBreak||lastBreak.retested||expired){
    const crossedUp=levels.all.filter(x=>x.side==="resistance"&&previous.close<=x.price&&last.close>x.price).sort((a,b)=>a.price-b.price)[0];
    const crossedDown=levels.all.filter(x=>x.side==="support"&&previous.close>=x.price&&last.close<x.price).sort((a,b)=>b.price-a.price)[0];
    if(crossedUp&&volumeRatio>=1.2){setLastBreak({side:"up",level:crossedUp.price,time:last.time,retested:false});addEvent("اختراق أولي للمقاومة","إغلاق مكتمل فوق "+fmt(crossedUp.price)+" مع حجم "+fmt(volumeRatio,2)+"x؛ انتظر إعادة الاختبار","good");}
