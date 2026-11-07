@@ -24,7 +24,7 @@ function Chart({candles,price,levels}:{candles:Candle[];price:number;levels:Retu
 export default function SmartChart(){
  const [market,setMarket]=useState<Market>("spot"),[interval,setInterval]=useState<Interval>("15m"),[ticker,setTicker]=useState<Ticker|null>(null),[candles,setCandles]=useState<Candle[]>([]),[h1,setH1]=useState<Candle[]>([]),[h4,setH4]=useState<Candle[]>([]),[connected,setConnected]=useState(false),[error,setError]=useState(""),[busy,setBusy]=useState(false),[permission,setPermission]=useState(false),[events,setEvents]=useState<EventItem[]>([]),[lastBreak,setLastBreak]=useState<BreakState|null>(null),[volumeStatus,setVolumeStatus]=useState("بانتظار بيانات الشموع");
  const eventId=useRef(0),lastAnalyzed=useRef(0),lastProximity=useRef("");
- const price=Number(ticker?.lastPrice||0),levels=useMemo(()=>calculateLevels(candles,h1,h4,price,interval),[candles,h1,h4,price]);
+ const price=Number(ticker?.lastPrice||0),levels=useMemo(()=>calculateLevels(candles,h1,h4,price,interval),[candles,h1,h4,price,interval]);
  const closed=candles.filter(c=>c.closeTime<Date.now()),last=closed.at(-1),previous=closed.at(-2),avgVol=closed.slice(-21,-1).reduce((s,c)=>s+c.volume,0)/Math.max(1,Math.min(20,closed.length-1)),ratio=last&&avgVol?last.volume/avgVol:0;
  const addEvent=useCallback((title:string,detail:string,tone:EventItem["tone"])=>{setEvents(old=>[{id:++eventId.current,time:new Date().toLocaleTimeString("ar"),title,detail,tone},...old].slice(0,35));if(permission&&"Notification"in window&&Notification.permission==="granted")new Notification("BTC RADAR · "+title,{body:detail});},[permission]);
  const refresh=useCallback(async()=>{setBusy(true);try{const [t,c,a,b]=await Promise.all([binance<Ticker>(market,(market==="futures"?"/fapi/v1":"/api/v3")+"/ticker/24hr?symbol=BTCUSDT"),binance<unknown[][]>(market,(market==="futures"?"/fapi/v1":"/api/v3")+"/klines?symbol=BTCUSDT&interval="+interval+"&limit=300"),binance<unknown[][]>(market,(market==="futures"?"/fapi/v1":"/api/v3")+"/klines?symbol=BTCUSDT&interval=1h&limit=240"),binance<unknown[][]>(market,(market==="futures"?"/fapi/v1":"/api/v3")+"/klines?symbol=BTCUSDT&interval=4h&limit=240")]);setTicker(t);setCandles(parseCandles(c));setH1(parseCandles(a));setH4(parseCandles(b));setConnected(true);setError("");}catch(e){setConnected(false);setError(e instanceof Error?e.message:"تعذر الاتصال بـ Binance");}finally{setBusy(false);}},[market,interval]);
@@ -48,7 +48,7 @@ export default function SmartChart(){
    if(crossedUp&&volumeRatio>=1.2){setLastBreak({side:"up",level:crossedUp.price,time:last.time,retested:false});addEvent("اختراق أولي للمقاومة","إغلاق مكتمل فوق "+fmt(crossedUp.price)+" مع حجم "+fmt(volumeRatio,2)+"x؛ انتظر إعادة الاختبار","good");}
    else if(crossedDown&&volumeRatio>=1.2){setLastBreak({side:"down",level:crossedDown.price,time:last.time,retested:false});addEvent("كسر أولي للدعم","إغلاق مكتمل تحت "+fmt(crossedDown.price)+" مع حجم "+fmt(volumeRatio,2)+"x؛ انتظر إعادة الاختبار","bad");}
   }
- },[last?.time,levels.all,avgVol,addEvent,lastBreak]);
+ },[last?.time,levels.all,avgVol,addEvent,lastBreak,interval]);
  useEffect(()=>{
   if(!lastBreak||!last||last.time<=lastBreak.time||lastBreak.retested)return;
   const band=Math.max(atr(closed)*.3,price*.001);
