@@ -35,7 +35,47 @@ const recent=c.slice(-101,-1),priorClose=c.at(-2).close,hi=recent.map(x=>x.high)
 function localExtremes(vals,isHigh){const out=[];for(let i=2;i<vals.length-2;i++){const v=vals[i],slice=vals.slice(i-2,i+3);if(isHigh?v===Math.max(...slice):v===Math.min(...slice))out.push(v);}return [...new Set(out)];}
 async function loadOrderBook(){try{const d=await getJSON(api('/'+(state.market==='futures'?'fapi/v1':'api/v3')+'/depth?symbol=BTCUSDT&limit=10'));const asks=d.asks.slice(0,5).reverse(),bids=d.bids.slice(0,5);const max=Math.max(...[...asks,...bids].map(x=>+x[1]));$('asks').innerHTML=asks.map(x=>bookRow(x,max,'ask')).join('');$('bids').innerHTML=bids.map(x=>bookRow(x,max,'bid')).join('');setText('spread',fmt(+d.asks[0][0]-+d.bids[0][0],2)+' USDT');}catch(e){$('asks').innerHTML='<div class="muted small">بيانات دفتر الأوامر غير متاحة</div>';$('bids').innerHTML='';}}
 function bookRow(x,max,type){const depth=Math.max(5,(+x[1]/max)*100);return '<div class="book-row" style="--depth:'+depth+'%"><span>'+fmt(+x[0],1)+'</span><span>'+fmt(+x[1],4)+'</span></div>';}
-async function loadFutures(){if(state.market!=='futures'){['fundingRate','openInterest','longShort','markPrice'].forEach(id=>setText(id,'—'));setText('futuresStatus','اختر Futures');setText('futuresNote','مقاييس التمويل والعقود المفتوحة متاحة عند اختيار سوق العقود الآجلة.');return;}setText('futuresStatus','مباشر');setText('futuresNote','بيانات Futures من واجهة Binance العامة.');try{const [premium,oi,ls]=await Promise.all([getJSON(api('/fapi/v1/premiumIndex?symbol=BTCUSDT',true)),getJSON(api('/fapi/v1/openInterest?symbol=BTCUSDT',true)),getJSON(api('/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=15m&limit=1',true)).catch(()=>[]) ]);const fr=+premium.lastFundingRate;setText('fundingRate',(fr*100).toFixed(4)+'%');setText('openInterest',compact(oi.openInterest));setText('longShort',ls.length?fmt(+ls[0].longShortRatio,3)+' : 1':'غير متاح');setText('markPrice',fmt(+premium.markPrice,2));}catch(e){setText('futuresStatus','بيانات جزئية');console.warn(e);}}
+async function loadFutures(){
+  if(state.market!=='futures'){
+    ['fundingRate','openInterest','longShort','markPrice'].forEach(id=>setText(id,'—'));
+    setText('futuresStatus','اختر Futures');
+    setText('futuresNote','اختر سوق العقود الآجلة لعرض التمويل والعقود المفتوحة ونسبة Long/Short.');
+    return;
+  }
+  setText('futuresStatus','جارٍ التحميل');
+  setText('futuresNote','جارٍ جلب كل مقياس بصورة مستقلة من Binance Futures...');
+  const requests=await Promise.allSettled([
+    getJSON('https://fapi.binance.com/fapi/v1/premiumIndex?symbol=BTCUSDT'),
+    getJSON('https://fapi.binance.com/fapi/v1/openInterest?symbol=BTCUSDT'),
+    getJSON('https://fapi.binance.com/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=15m&limit=1')
+  ]);
+  const [premiumResult,oiResult,lsResult]=requests;
+  const errors=[];
+  if(premiumResult.status==='fulfilled'){
+    const premium=premiumResult.value;
+    setText('fundingRate',Number.isFinite(+premium.lastFundingRate)?(+premium.lastFundingRate*100).toFixed(4)+'%':'غير متاح');
+    setText('markPrice',Number.isFinite(+premium.markPrice)?fmt(+premium.markPrice,2):'غير متاح');
+  }else{
+    setText('fundingRate','تعذر التحميل');setText('markPrice','تعذر التحميل');
+    errors.push('Funding/Mark: '+(premiumResult.reason?.message||'فشل الاتصال'));
+  }
+  if(oiResult.status==='fulfilled'){
+    setText('openInterest',compact(oiResult.value.openInterest));
+  }else{
+    setText('openInterest','تعذر التحميل');
+    errors.push('Open Interest: '+(oiResult.reason?.message||'فشل الاتصال'));
+  }
+  if(lsResult.status==='fulfilled'&&Array.isArray(lsResult.value)&&lsResult.value.length){
+    setText('longShort',fmt(+lsResult.value[0].longShortRatio,3)+' : 1');
+  }else{
+    setText('longShort','غير متاح');
+    if(lsResult.status==='rejected')errors.push('Long/Short: '+(lsResult.reason?.message||'غير متاح'));
+  }
+  const coreOk=premiumResult.status==='fulfilled'||oiResult.status==='fulfilled';
+  setText('futuresStatus',coreOk?'متصل':'فشل الاتصال');
+  setText('futuresNote',errors.length?'تعذر تحميل بعض المقاييس: '+errors.join(' | '):'تم تحديث بيانات العقود الآجلة من Binance Futures.');
+  if(errors.length)console.warn('Futures metrics:',errors);
+}
 function drawChart(){const canvas=$('priceChart'),ctx=canvas.getContext('2d'),rect=canvas.getBoundingClientRect(),dpr=window.devicePixelRatio||1;if(!rect.width||!state.candles.length)return;canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);const W=rect.width,H=rect.height,c=state.candles.slice(-100),pad={l:8,r:62,t:12,b:22},cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;const min=Math.min(...c.map(x=>x.low)),max=Math.max(...c.map(x=>x.high)),range=max-min||1;const y=v=>pad.t+(max-v)/range*ch,x=i=>pad.l+(i+.5)*cw/c.length;ctx.clearRect(0,0,W,H);ctx.font='10px IBM Plex Sans Arabic';ctx.textAlign='left';ctx.fillStyle='#8090aa';for(let i=0;i<=4;i++){const val=max-range*i/4,yy=y(val);ctx.strokeStyle='#25334a';ctx.setLineDash([3,4]);ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(W-pad.r,yy);ctx.stroke();ctx.setLineDash([]);ctx.fillText(fmt(val,0),W-pad.r+6,yy+3);}const step=cw/c.length,body=Math.max(2,step*.62);c.forEach((v,i)=>{const up=v.close>=v.open,col=up?'#27d6a0':'#ff657a',xx=x(i);ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(xx,y(v.high));ctx.lineTo(xx,y(v.low));ctx.stroke();const top=y(Math.max(v.open,v.close)),height=Math.max(1,Math.abs(y(v.open)-y(v.close)));ctx.fillRect(xx-body/2,top,body,height);});const full=state.candles.map(v=>v.close);[[20,'#e8b75a'],[50,'#6e9cff'],[200,'#d77be8']].forEach(([period,color])=>{if(full.length<period)return;const vals=ema(full,period).slice(-100);ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.beginPath();let started=false;vals.forEach((v,i)=>{if(v==null)return;const xx=x(i),yy=y(v);if(!started){ctx.moveTo(xx,yy);started=true;}else ctx.lineTo(xx,yy);});ctx.stroke();});}
 function connectWS(){if(state.ws){state.ws.onclose=null;state.ws.close();}const stream=state.market==='futures'?'wss://fstream.binance.com/ws/btcusdt@ticker':'wss://stream.binance.com:9443/ws/btcusdt@ticker';try{const ws=new WebSocket(stream);state.ws=ws;ws.onopen=()=>setConnection('connected','البث المباشر يعمل');ws.onmessage=e=>{const t=JSON.parse(e.data);state.lastPrice=+t.c;setText('lastPrice',fmt(+t.c,2));const pct=+t.P;setText('priceChange',(pct>=0?'+':'')+fmt(pct,2)+'%');$('priceChange').classList.toggle('negative',pct<0);setText('lastUpdate','تحديث مباشر: '+new Date().toLocaleTimeString('ar'));setText('levelPrice',fmt(+t.c,2));updateRisk();};ws.onerror=()=>setConnection('error','مشكلة في البث المباشر');ws.onclose=()=>{setConnection('error','إعادة الاتصال بالبث...');clearTimeout(state.reconnect);state.reconnect=setTimeout(connectWS,4000);};}catch(e){setConnection('error','البث غير متاح');}}
 async function refreshAll(){if(state.busy)return;state.busy=true;try{await Promise.all([loadTicker(),loadCandles(),loadOrderBook(),loadFutures()]);}finally{state.busy=false;}}
