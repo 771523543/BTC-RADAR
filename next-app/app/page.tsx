@@ -44,7 +44,7 @@ export default function Home() {
   const [alertPermission,setAlertPermission]=useState(false);
   const lastProximityAlert=useRef("");
   const price=Number(ticker?.lastPrice||0);
-  const levels=useMemo(()=>calculateLevels(candles,h1,h4,price,interval),[candles,h1,h4,price]);
+  const levels=useMemo(()=>calculateLevels(candles,h1,h4,price,interval),[candles,h1,h4,price,interval]);
   const closes=candles.filter(c=>c.closeTime<Date.now()).map(c=>c.close);
   const e20=ema(closes,20),e50=ema(closes,50),e200=ema(closes,200),currentRsi=rsi(closes);
   const latest=candles.filter(c=>c.closeTime<Date.now()).at(-1);
