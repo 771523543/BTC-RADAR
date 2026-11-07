@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Activity, BookOpen, CircleDollarSign, RadioTower, RefreshCw, ShieldAlert, TrendingDown, TrendingUp, Wifi, WifiOff } from "lucide-react";
 import { atr, binance, calculateLevels, ema, parseCandles, rsi, type Candle, type Interval, type Market } from "@/lib/market";
 
@@ -42,6 +42,7 @@ export default function Home() {
   const [riskPct,setRiskPct]=useState("1");
   const [stopPct,setStopPct]=useState("1");
   const [alertPermission,setAlertPermission]=useState(false);
+  const lastProximityAlert=useRef("");
   const price=Number(ticker?.lastPrice||0);
   const levels=useMemo(()=>calculateLevels(candles,h1,h4,price),[candles,h1,h4,price]);
   const closes=candles.filter(c=>c.closeTime<Date.now()).map(c=>c.close);
@@ -92,10 +93,16 @@ export default function Home() {
   const askAlert=(title:string,body:string)=>{if(alertPermission&&"Notification"in window&&Notification.permission==="granted")new Notification(title,{body});};
 
   useEffect(()=>{
-    if(!price||!levels.resistance[0]||!levels.support[0])return;
+    if(!price){lastProximityAlert.current="";return;}
     const near=Math.max(levels.atr*.35,price*.0015),r=levels.resistance[0],s=levels.support[0];
-    if(r.price-price<=near)askAlert("اقترب BTC من المقاومة", "السعر "+fmt(price)+" والمقاومة "+fmt(r.price));
-    else if(price-s.price<=near)askAlert("اقترب BTC من الدعم", "السعر "+fmt(price)+" والدعم "+fmt(s.price));
+    let key="";
+    if(r&&r.price-price>=0&&r.price-price<=near)key="resistance:"+Math.round(r.price);
+    else if(s&&price-s.price>=0&&price-s.price<=near)key="support:"+Math.round(s.price);
+    if(!key){lastProximityAlert.current="";return;}
+    if(key===lastProximityAlert.current)return;
+    lastProximityAlert.current=key;
+    if(key.startsWith("resistance:"))askAlert("اقترب BTC من المقاومة", "السعر "+fmt(price)+" والمقاومة "+fmt(r!.price));
+    else askAlert("اقترب BTC من الدعم", "السعر "+fmt(price)+" والدعم "+fmt(s!.price));
   },[price,levels.resistance,levels.support,levels.atr]);
 
   const asks=book?.asks.slice(0,5).reverse()||[],bids=book?.bids.slice(0,5)||[];
