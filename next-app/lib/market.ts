@@ -79,6 +79,10 @@ export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], p
   merged.forEach(x => { x.lower = x.price - tolerance * .45; x.upper = x.price + tolerance * .45; x.strength = x.touches >= 7 ? "قوية" : x.touches >= 3 ? "متوسطة" : "مراقبة"; x.flipped = (x.side === "support" && x.price > price) || (x.side === "resistance" && x.price < price); });
   return {
     all: merged,
+    // Display levels by their current position relative to price, while keeping
+    // the original pivot side in `all` for breakout / breakdown detection.
+    // This makes a broken resistance appear as support, and a broken support
+    // appear as resistance, without losing the original level identity.
     resistance: merged.filter(x => x.price > price).sort((a, b) => a.price - b.price).slice(0, 4),
     support: merged.filter(x => x.price < price).sort((a, b) => b.price - a.price).slice(0, 4),
     atr: baseAtr,
