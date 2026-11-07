@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1020" />
+  <meta name="description" content="BTC RADAR — لوحة عربية لمراقبة وتحليل BTCUSDT ببيانات Binance المباشرة." />
+  <title>BTC RADAR | رادار البيتكوين</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="BTC RADAR الرئيسية">
+        <span class="brand-mark">₿</span>
+        <span><b>BTC RADAR</b><small>رادار السوق والتحليل</small></span>
+      </a>
+      <div class="top-actions">
+        <span class="connection"><i id="connectionDot"></i><span id="connectionText">جارٍ الاتصال...</span></span>
+        <button class="icon-btn" id="refreshBtn" title="تحديث البيانات" aria-label="تحديث البيانات">↻</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero-row">
+        <div>
+          <div class="eyebrow"><span class="live-pulse"></span> بيانات سوق مباشرة من Binance</div>
+          <h1>رادار البيتكوين <span>BTCUSDT</span></h1>
+          <p class="muted">راقب السوق، افهم السياق، واتخذ قرارك بنفسك.</p>
+        </div>
+        <div class="market-switch" role="group" aria-label="نوع السوق">
+          <button class="active" data-market="spot">Spot فوري</button>
+          <button data-market="futures">Futures عقود</button>
+        </div>
+      </section>
+
+      <section class="price-panel panel">
+        <div class="price-main">
+          <div class="muted label">سعر البيتكوين مقابل USDT <span class="tiny-tag" id="marketLabel">SPOT</span></div>
+          <div class="price-line"><strong id="lastPrice">—</strong><span id="priceChange" class="change">—</span></div>
+          <div class="muted small" id="lastUpdate">بانتظار بيانات السوق...</div>
+        </div>
+        <div class="price-stats">
+          <div><span>أعلى 24 ساعة</span><b id="high24">—</b></div>
+          <div><span>أدنى 24 ساعة</span><b id="low24">—</b></div>
+          <div><span>حجم التداول 24س</span><b id="volume24">—</b></div>
+          <div><span>التغير 24س</span><b id="change24">—</b></div>
+        </div>
+      </section>
+
+      <section class="grid-main">
+        <div class="panel chart-panel">
+          <div class="section-head chart-head">
+            <div><h2>حركة السعر</h2><p class="muted small">شموع يابانية ومتوسطات متحركة</p></div>
+            <div class="timeframes" id="timeframes">
+              <button data-interval="5m">5د</button><button class="active" data-interval="15m">15د</button><button data-interval="1h">1س</button><button data-interval="4h">4س</button><button data-interval="1d">1ي</button>
+            </div>
+          </div>
+          <div class="legend"><span><i class="legend-line ema20"></i> EMA 20</span><span><i class="legend-line ema50"></i> EMA 50</span><span><i class="legend-line ema200"></i> EMA 200</span></div>
+          <div class="chart-wrap"><canvas id="priceChart" aria-label="الرسم البياني للشموع"></canvas><div class="chart-loading" id="chartLoading">تحميل الشموع...</div></div>
+          <div class="chart-foot"><span id="candleInfo">—</span><span>المصدر: Binance API</span></div>
+        </div>
+
+        <aside class="panel analysis-panel">
+          <div class="section-head"><div><h2>قراءة السوق</h2><p class="muted small">استنتاج آلي من المؤشرات الظاهرة</p></div><span class="tag neutral" id="trendTag">قيد التحليل</span></div>
+          <div class="analysis-score"><div class="score-ring" id="scoreRing"><b id="scoreValue">—</b><small>قوة الاتجاه</small></div><div class="score-copy"><b id="trendTitle">بانتظار البيانات</b><p id="trendDescription" class="muted small">سيظهر ملخص الاتجاه بعد تحميل الشموع.</p></div></div>
+          <div class="signal-box" id="signalBox"><div class="signal-icon">⌁</div><div><b id="signalTitle">لا توجد إشارة مؤكدة</b><p id="signalText">انتظر اكتمال البيانات وتحقق شروط السيناريو.</p></div></div>
+          <div class="indicator-list">
+            <div><span>EMA 20</span><b id="ema20Value">—</b><em id="ema20State">—</em></div>
+            <div><span>EMA 50</span><b id="ema50Value">—</b><em id="ema50State">—</em></div>
+            <div><span>EMA 200</span><b id="ema200Value">—</b><em id="ema200State">—</em></div>
+            <div><span>RSI 14</span><b id="rsiValue">—</b><em id="rsiState">—</em></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="data-grid">
+        <article class="panel">
+          <div class="section-head"><div><h2>الدعم والمقاومة</h2><p class="muted small">مستويات محورية من آخر 100 شمعة</p></div><span class="tag">تقديرية</span></div>
+          <div class="levels">
+            <div class="level-row resistance"><span><i></i> المقاومة 2</span><b id="resistance2">—</b></div>
+            <div class="level-row resistance"><span><i></i> المقاومة 1</span><b id="resistance1">—</b></div>
+            <div class="current-level"><span>السعر الحالي</span><b id="levelPrice">—</b></div>
+            <div class="level-row support"><span><i></i> الدعم 1</span><b id="support1">—</b></div>
+            <div class="level-row support"><span><i></i> الدعم 2</span><b id="support2">—</b></div>
+          </div>
+          <p class="footnote">المستويات محسوبة من قمم وقيعان الشموع الأخيرة، وليست ضمانًا لارتداد السعر.</p>
+        </article>
+
+        <article class="panel">
+          <div class="section-head"><div><h2>بيانات العقود الآجلة</h2><p class="muted small">مقاييس مشتقة من سوق Binance Futures</p></div><span class="tag" id="futuresStatus">—</span></div>
+          <div class="metric-grid">
+            <div class="metric"><span>Funding Rate</span><b id="fundingRate">—</b><small>معدل التمويل</small></div>
+            <div class="metric"><span>Open Interest</span><b id="openInterest">—</b><small>العقود المفتوحة (BTC)</small></div>
+            <div class="metric"><span>Long / Short</span><b id="longShort">—</b><small>نسبة الحسابات</small></div>
+            <div class="metric"><span>Mark Price</span><b id="markPrice">—</b><small>السعر المرجعي</small></div>
+          </div>
+          <p class="footnote" id="futuresNote">تُعرض هذه المقاييس عند اختيار العقود، وقد تتأخر أو تتعذر إذا قيّدت Binance الطلبات.</p>
+        </article>
+
+        <article class="panel">
+          <div class="section-head"><div><h2>دفتر الأوامر</h2><p class="muted small">أفضل عروض البيع والشراء</p></div><span class="tag">Top 5</span></div>
+          <div class="book-head"><span>السعر (USDT)</span><span>الكمية (BTC)</span></div>
+          <div id="asks" class="book-side asks"><div class="muted small">تحميل...</div></div>
+          <div class="book-spread"><span>الفرق بين أفضل طلب وعرض</span><b id="spread">—</b></div>
+          <div id="bids" class="book-side bids"><div class="muted small">تحميل...</div></div>
+        </article>
+      </section>
+
+      <section class="grid-bottom">
+        <article class="panel plan-panel">
+          <div class="section-head"><div><h2>خطة السيناريو</h2><p class="muted small">شروط للمراقبة وليست أمر دخول</p></div><span class="tag neutral">يدوي</span></div>
+          <div class="scenario-grid">
+            <div><span class="scenario-label bullish">سيناريو إيجابي</span><b id="bullTrigger">—</b><p id="bullText">راقب إغلاقًا أعلى المقاومة ثم إعادة اختبار ناجحة.</p></div>
+            <div><span class="scenario-label bearish">سيناريو سلبي</span><b id="bearTrigger">—</b><p id="bearText">راقب إغلاقًا أسفل الدعم ثم إعادة اختبار فاشلة.</p></div>
+          </div>
+          <div class="rule-note"><b>قاعدة الرادار:</b> لا تعتبر اختراقًا حقيقيًا بمجرد لمس المستوى. انتظر إغلاق الشمعة، ثم راقب إعادة الاختبار وحجم التداول. إذا لم تتوفر الشروط فالقرار هو الانتظار.</div>
+        </article>
+
+        <article class="panel risk-panel">
+          <div class="section-head"><div><h2>حاسبة المخاطرة</h2><p class="muted small">تقدير حجم الصفقة وفق حد الخسارة</p></div><span class="tag">أداة تعليمية</span></div>
+          <div class="risk-inputs">
+            <label>رأس المال (USDT)<input id="capitalInput" type="number" min="1" value="10000"></label>
+            <label>المخاطرة لكل صفقة (%)<input id="riskInput" type="number" min="0.1" max="5" step="0.1" value="0.5"></label>
+            <label>المسافة إلى وقف الخسارة (%)<input id="stopInput" type="number" min="0.1" max="50" step="0.1" value="1"></label>
+          </div>
+          <div class="risk-results"><div><span>المبلغ المعرض للخطر</span><b id="riskAmount">$50.00</b></div><div><span>حجم المركز التقريبي</span><b id="positionSize">$5,000.00</b></div></div>
+          <p class="footnote">الحاسبة لا تضيف الرسوم أو الانزلاق السعري أو التمويل. حجم المركز ليس توصية باستخدام الرافعة. التزم بوقف الخسارة المحدد مسبقًا.</p>
+        </article>
+      </section>
+
+      <section class="disclaimer"><b>تنبيه:</b> هذه لوحة معلومات وتحليل تعليمي وليست توصية استثمارية. البيانات قد تتأخر أو تنقطع، والاستنتاجات الآلية احتمالية. لا توجد أوامر شراء أو بيع تلقائية في هذا الموقع.</section>
+    </main>
+    <footer><span>BTC RADAR</span><span>مصدر البيانات: Binance · تحديث مباشر</span><span id="footerTime">—</span></footer>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>
