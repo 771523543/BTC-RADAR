@@ -114,8 +114,22 @@
         <article class="panel plan-panel">
           <div class="section-head"><div><h2>خطة السيناريو</h2><p class="muted small">شروط للمراقبة وليست أمر دخول</p></div><span class="tag neutral">يدوي</span></div>
           <div class="scenario-grid">
-            <div><span class="scenario-label bullish">سيناريو إيجابي</span><b id="bullTrigger">—</b><p id="bullText">راقب إغلاقًا أعلى المقاومة ثم إعادة اختبار ناجحة.</p></div>
-            <div><span class="scenario-label bearish">سيناريو سلبي</span><b id="bearTrigger">—</b><p id="bearText">راقب إغلاقًا أسفل الدعم ثم إعادة اختبار فاشلة.</p></div>
+            <div>
+              <span class="scenario-label bullish">سيناريو إيجابي · اختراق المقاومة</span>
+              <b id="bullTrigger">—</b>
+              <span class="scenario-state" id="bullState">انتظار الاختراق</span>
+              <p id="bullText">انتظر إغلاقًا فوق المقاومة، ثم إعادة اختبار ناجحة.</p>
+              <p class="scenario-detail" id="bullTarget">الهدف الأول: —</p>
+              <p class="scenario-detail" id="bullInvalidation">إبطال السيناريو: —</p>
+            </div>
+            <div>
+              <span class="scenario-label bearish">سيناريو سلبي · كسر الدعم</span>
+              <b id="bearTrigger">—</b>
+              <span class="scenario-state" id="bearState">انتظار الكسر</span>
+              <p id="bearText">انتظر إغلاقًا تحت الدعم، ثم إعادة اختبار فاشلة.</p>
+              <p class="scenario-detail" id="bearTarget">الهدف الأول: —</p>
+              <p class="scenario-detail" id="bearInvalidation">إبطال السيناريو: —</p>
+            </div>
           </div>
           <div class="confirmation-grid">
             <div><span>حالة التأكيد</span><b id="confirmationStatus">بانتظار البيانات</b></div>
