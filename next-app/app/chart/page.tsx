@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Bell, RefreshCw, Wifi, WifiOff } from "lucide-react";
+import { Bell, RefreshCw, Wifi, WifiOff } from "lucide-react";
 import { atr, binance, calculateLevels, parseCandles, type Candle, type Interval, type Market } from "@/lib/market";
 
 const frames:Interval[]=["1m","5m","15m","1h","4h"];
