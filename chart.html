@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#090e1b"><meta name="description" content="الشارت الذكي BTC RADAR: سعر مباشر وشموع ودعم ومقاومة وتنبيهات السوق.">
+<title>الشارت الذكي | BTC RADAR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles.css"><link rel="stylesheet" href="./chart.css">
+</head>
+<body>
+<div class="app-shell smart-shell">
+<header class="topbar"><a class="brand" href="./index.html"><span class="brand-mark">₿</span><span><b>BTC RADAR</b><small>رادار السوق والتحليل</small></span></a>
+<nav class="smart-nav"><a href="./index.html">لوحة الرادار</a><a class="active" href="./chart.html">الشارت الذكي</a></nav>
+<div class="top-actions"><span class="connection"><i id="connectionDot"></i><span id="connectionText">جارٍ الاتصال...</span></span><button class="icon-btn" id="refreshBtn" title="تحديث">↻</button></div></header>
+<main>
+<section class="hero-row smart-hero"><div><div class="eyebrow"><span class="live-pulse"></span> شارت مباشر متزامن مع Binance</div><h1>الشارت الذكي <span>BTCUSDT</span></h1><p class="muted">السعر والشموع والمستويات والتنبيهات في شاشة واحدة.</p></div>
+<div class="market-switch" role="group" aria-label="نوع السوق"><button class="active" data-market="spot">Spot فوري</button><button data-market="futures">Futures عقود</button></div></section>
+<section class="smart-price panel"><div><span class="muted label">السعر المباشر · USDT</span><div class="price-line"><strong id="livePrice">—</strong><span id="liveChange" class="change">—</span></div><small class="muted" id="updatedAt">بانتظار بيانات السوق...</small></div>
+<div class="smart-stats"><div><span>أعلى 24س</span><b id="high24">—</b></div><div><span>أدنى 24س</span><b id="low24">—</b></div><div><span>حجم 24س</span><b id="volume24">—</b></div></div></section>
+<section class="panel smart-chart-panel"><div class="section-head chart-head"><div><h2>الشارت المباشر</h2><p class="muted small">الخطوط والمستويات محسوبة من شموع الإطار المختار</p></div><div class="timeframes" id="timeframes"><button data-interval="5m">5د</button><button class="active" data-interval="15m">15د</button><button data-interval="1h">1س</button><button data-interval="4h">4س</button><button data-interval="1d">1ي</button></div></div>
+<div class="chart-legend"><span><i class="legend-res"></i> مقاومة</span><span><i class="legend-sup"></i> دعم</span><span><i class="legend-price"></i> السعر الحالي</span><span><i class="legend-vol"></i> حجم التداول</span></div>
+<div class="smart-canvas-wrap"><canvas id="smartChart" aria-label="شموع البيتكوين مع خطوط الدعم والمقاومة وحجم التداول"></canvas><div class="chart-loading" id="chartLoading">تحميل الشموع...</div></div>
+<div class="chart-foot"><span id="candleInfo">—</span><span>آخر 120 شمعة · Binance</span></div></section>
+<section class="smart-levels-grid">
+<article class="panel"><div class="section-head"><div><h2>مستويات الدعم والمقاومة</h2><p class="muted small">مستخرجة من القمم والقيعان المحورية</p></div><span class="tag">تتحدث مع الشموع</span></div>
+<div class="level-card resistance-card"><span>المقاومة الأقرب R1</span><b id="res1">—</b><small id="res1Distance">—</small></div><div class="level-card resistance-card"><span>المقاومة التالية R2</span><b id="res2">—</b><small id="res2Distance">—</small></div>
+<div class="level-current"><span>السعر اللحظي</span><b id="levelLivePrice">—</b></div>
+<div class="level-card support-card"><span>الدعم الأقرب S1</span><b id="sup1">—</b><small id="sup1Distance">—</small></div><div class="level-card support-card"><span>الدعم التالي S2</span><b id="sup2">—</b><small id="sup2Distance">—</small></div>
+<p class="footnote" id="levelMethod">تُحسب المستويات من آخر 240 شمعة مكتملة، وقد تتغير عند تغيير الإطار الزمني.</p></article>
+<article class="panel"><div class="section-head"><div><h2>حالة السوق والتنبيهات</h2><p class="muted small">حالات منفصلة حتى لا نخلط الاقتراب بالاختراق</p></div><button class="notify-btn" id="notifyBtn">تفعيل إشعارات المتصفح</button></div>
+<div class="alert-state" id="proximityState"><i class="alert-dot neutral-dot"></i><div><b>مراقبة المسافة</b><span>بانتظار السعر والمستويات</span></div></div>
+<div class="alert-state" id="breakState"><i class="alert-dot neutral-dot"></i><div><b>الاختراق / الكسر</b><span>بانتظار إغلاق شمعة مؤكدة</span></div></div>
+<div class="alert-state" id="retestState"><i class="alert-dot neutral-dot"></i><div><b>إعادة الاختبار</b><span>سيظهر هل نجح الاختبار أم فشل</span></div></div>
+<div class="alert-state" id="volumeState"><i class="alert-dot neutral-dot"></i><div><b>حجم التداول</b><span>مقارنة بمتوسط آخر 20 شمعة مكتملة</span></div></div>
+<div class="alert-help">تعمل التنبيهات داخل الصفحة أثناء فتحها. إشعارات المتصفح تحتاج موافقتك، وقد لا تعمل إذا أغلق المتصفح الصفحة.</div></article></section>
+<section class="panel"><div class="section-head"><div><h2>سجل التنبيهات</h2><p class="muted small">أحدث الأحداث التي رصدها الشارت</p></div><button class="clear-btn" id="clearAlerts">مسح السجل</button></div><div id="alertLog" class="alert-log"><div class="empty-log">لم يتم رصد تنبيهات بعد. ستظهر الأحداث هنا تلقائيًا.</div></div></section>
+<section class="disclaimer"><b>مهم:</b> الاقتراب تنبيه مسافة فقط، وليس اختراقًا. الاختراق أو الكسر لا يُعتمد إلا بعد إغلاق شمعة مكتملة مع حجم تداول داعم، ثم تقييم إعادة الاختبار. التحليل تعليمي ولا ينفذ أي صفقة.</section>
+</main><footer><span>BTC RADAR · الشارت الذكي</span><span>مصدر البيانات: Binance</span><span id="footerTime">—</span></footer></div>
+<script src="./chart-page.js"></script></body></html>
