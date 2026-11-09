@@ -1,7 +1,7 @@
 export type Market = "spot" | "futures";
 export type Interval = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
 export type Candle = { time: number; closeTime: number; open: number; high: number; low: number; close: number; volume: number };
-export type Level = { price: number; side: "support" | "resistance"; touches: number; timeframes: string[]; strength: string; lower: number; upper: number; flipped: boolean };
+export type Level = { price: number; side: "support" | "resistance"; touches: number; timeframes: string[]; strength: string; lower: number; upper: number; flipped: boolean; score: number };
 
 const hosts = (market: Market) => market === "futures"
   ? ["https://fapi.binance.com", "https://fapi1.binance.com", "https://fapi2.binance.com", "https://fapi3.binance.com"]
@@ -45,38 +45,94 @@ export function atr(candles: Candle[], period = 14): number {
   return recent.reduce((sum, c, i) => { const prev = i ? recent[i - 1].close : c.open; return sum + Math.max(c.high - c.low, Math.abs(c.high - prev), Math.abs(c.low - prev)); }, 0) / recent.length;
 }
 function frameLevels(candles: Candle[], frame: string, tolerance: number): Level[] {
-  const c = candles.filter(x => x.closeTime < Date.now()).slice(-240);
+  const c = candles
+    .filter(x => Number.isFinite(x.open) && Number.isFinite(x.high) && Number.isFinite(x.low) && Number.isFinite(x.close) && x.closeTime < Date.now())
+    .slice(-240);
   if (c.length < 25) return [];
-  const pivots: { price: number; side: "support" | "resistance" }[] = [];
+
+  // Confirm pivots only after two candles have formed on both sides.
+  const pivots: { price: number; side: "support" | "resistance"; index: number; time: number }[] = [];
   for (let i = 2; i < c.length - 2; i++) {
     const w = c.slice(i - 2, i + 3);
-    if (c[i].high === Math.max(...w.map(x => x.high)) && w.filter(x => x.high === c[i].high).length === 1) pivots.push({ price: c[i].high, side: "resistance" });
-    if (c[i].low === Math.min(...w.map(x => x.low)) && w.filter(x => x.low === c[i].low).length === 1) pivots.push({ price: c[i].low, side: "support" });
+    const highs = w.map(x => x.high), lows = w.map(x => x.low);
+    if (c[i].high === Math.max(...highs) && highs.filter(x => x === c[i].high).length === 1) {
+      pivots.push({ price: c[i].high, side: "resistance", index: i, time: c[i].time });
+    }
+    if (c[i].low === Math.min(...lows) && lows.filter(x => x === c[i].low).length === 1) {
+      pivots.push({ price: c[i].low, side: "support", index: i, time: c[i].time });
+    }
   }
-  const groups: Level[] = [];
-  for (const p of pivots) {
-    const found = groups.find(x => x.side === p.side && Math.abs(x.price - p.price) <= tolerance);
-    if (found) { found.price = (found.price * found.touches + p.price) / (found.touches + 1); found.touches++; }
-    else groups.push({ price: p.price, side: p.side, touches: 1, timeframes: [frame], strength: "مراقبة", lower: p.price - tolerance * .35, upper: p.price + tolerance * .35, flipped: false });
+
+  // Cluster around a stable weighted centre instead of allowing sequential
+  // matches to drift a zone away from the actual swing prices.
+  const clusters: { side: "support" | "resistance"; prices: number[]; indexes: number[]; times: string[] }[] = [];
+  for (const pivot of pivots) {
+    let best: typeof clusters[number] | undefined;
+    let bestDistance = Infinity;
+    for (const group of clusters) {
+      if (group.side !== pivot.side) continue;
+      const centre = group.prices.reduce((sum, value) => sum + value, 0) / group.prices.length;
+      const distance = Math.abs(centre - pivot.price);
+      if (distance <= tolerance && distance < bestDistance) { best = group; bestDistance = distance; }
+    }
+    if (!best) clusters.push({ side: pivot.side, prices: [pivot.price], indexes: [pivot.index], times: [frame] });
+    else { best.prices.push(pivot.price); best.indexes.push(pivot.index); }
   }
-  for (const g of groups) {
-    let hits = 0, last = -10;
-    c.forEach((x, i) => { if (x.high >= g.price - tolerance * .55 && x.low <= g.price + tolerance * .55 && i - last > 2) { hits++; last = i; } });
-    g.touches = Math.max(g.touches, hits);
+
+  const result: Level[] = [];
+  for (const group of clusters) {
+    const centre = group.prices.reduce((sum, value) => sum + value, 0) / group.prices.length;
+    const lower = centre - tolerance * 0.45;
+    const upper = centre + tolerance * 0.45;
+    const interactions: number[] = [];
+    let lastInteraction = -10;
+    for (let i = 0; i < c.length; i++) {
+      if (c[i].high >= lower && c[i].low <= upper && i - lastInteraction > 2) {
+        interactions.push(i);
+        lastInteraction = i;
+      }
+    }
+
+    // A touch is more meaningful when price rejects the zone afterwards.
+    const rangeAtr = atr(c.slice(Math.max(0, c.length - 30)));
+    let reactions = 0;
+    for (const index of interactions) {
+      const later = c.slice(index + 1, Math.min(c.length, index + 4));
+      const rejected = later.some(bar => group.side === "support"
+        ? bar.close >= centre + rangeAtr * 0.35
+        : bar.close <= centre - rangeAtr * 0.35);
+      if (rejected) reactions++;
+    }
+    const touchCount = Math.max(interactions.length, group.indexes.length);
+    const recency = group.indexes.length
+      ? Math.max(...group.indexes) / Math.max(1, c.length - 1)
+      : 0;
+    const score = touchCount + reactions * 0.75 + recency;
+    result.push({
+      price: centre,
+      side: group.side,
+      touches: touchCount,
+      timeframes: [frame],
+      strength: score >= 10 ? "قوية" : score >= 5 ? "متوسطة" : "مراقبة",
+      score,
+      lower,
+      upper,
+      flipped: false,
+    });
   }
-  return groups;
+  return result;
 }
 export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], price: number, currentFrame: string = "15m") {
   const closed = (items: Candle[]) => items.filter(x => x.closeTime < Date.now()).slice(-240);
   const currentClosed = closed(current);
   const baseAtr = atr(currentClosed);
-  const priceFloor = price > 0 ? price * 0.0008 : 0;
-  // Each timeframe gets its own volatility tolerance. Reusing the 5m/15m ATR
-  // for 1h and 4h used to make higher-timeframe zones too narrow or too wide.
-  const toleranceFor = (items: Candle[]) => Math.max(atr(closed(items)) * 0.35, priceFloor);
-  const currentTolerance = toleranceFor(current);
-  const h1Tolerance = toleranceFor(h1);
-  const h4Tolerance = toleranceFor(h4);
+  // Volatility controls zone width; small timeframe-specific price floors prevent
+  // low-volatility candles from producing zero-width zones without making 1m/5m
+  // levels as wide as higher-timeframe levels.
+  const toleranceFor = (items: Candle[], floorPct: number) => Math.max(atr(closed(items)) * 0.35, price > 0 ? price * floorPct : 0);
+  const currentTolerance = toleranceFor(current, 0.00018);
+  const h1Tolerance = toleranceFor(h1, 0.00028);
+  const h4Tolerance = toleranceFor(h4, 0.0004);
   const all = [
     ...frameLevels(current, currentFrame, currentTolerance),
     ...frameLevels(h1, "1h", h1Tolerance),
@@ -84,7 +140,7 @@ export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], p
   ].sort((a, b) => a.price - b.price);
 
   // Merge only nearby zones, using a conservative cross-timeframe tolerance.
-  const mergeTolerance = Math.max(price > 0 ? price * 0.00045 : 0, Math.min(currentTolerance, h1Tolerance, h4Tolerance) * 0.8);
+  const mergeTolerance = Math.max(price > 0 ? price * 0.0002 : 0, Math.min(currentTolerance, h1Tolerance, h4Tolerance) * 0.8);
   const merged: Level[] = [];
   for (const item of all) {
     const found = merged.find(x => x.side === item.side && Math.abs(x.price - item.price) <= mergeTolerance);
@@ -93,6 +149,7 @@ export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], p
       const totalTouches = found.touches + item.touches;
       found.price = (found.price * found.touches + item.price * item.touches) / totalTouches;
       found.touches = totalTouches;
+      found.score += item.score;
       if (!found.timeframes.includes(item.timeframes[0])) found.timeframes.push(item.timeframes[0]);
     }
   }
@@ -102,16 +159,17 @@ export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], p
     x.upper = x.price + zoneTolerance * 0.45;
     // A level gains weight from repeated reactions and agreement across frames.
     const frameBonus = x.timeframes.length >= 3 ? 2 : x.timeframes.length === 2 ? 1 : 0;
-    const score = x.touches + frameBonus;
-    x.strength = score >= 9 ? "قوية" : score >= 4 ? "متوسطة" : "مراقبة";
+    const score = x.score + frameBonus;
+    x.score = score;
+    x.strength = score >= 12 ? "قوية" : score >= 6 ? "متوسطة" : "مراقبة";
     x.flipped = (x.side === "support" && x.price > price) || (x.side === "resistance" && x.price < price);
   });
   return {
     all: merged,
     // Show the nearest zones on each side of the live price, while preserving
     // each pivot's original identity for breakout/breakdown event detection.
-    resistance: merged.filter(x => x.price > price).sort((a, b) => a.price - b.price).slice(0, 4),
-    support: merged.filter(x => x.price < price).sort((a, b) => b.price - a.price).slice(0, 4),
+    resistance: merged.filter(x => x.price > price).map(x => ({ ...x, flipped: x.side === "support" })).sort((a, b) => a.price - b.price).slice(0, 4),
+    support: merged.filter(x => x.price < price).map(x => ({ ...x, flipped: x.side === "resistance" })).sort((a, b) => b.price - a.price).slice(0, 4),
     atr: baseAtr,
   };
 }
