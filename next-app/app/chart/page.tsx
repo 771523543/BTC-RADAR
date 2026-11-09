@@ -15,7 +15,7 @@ function Chart({candles,price,levels}:{candles:Candle[];price:number;levels:Retu
  const bars=candles.slice(-120);if(!bars.length)return <div className="chart-empty">بانتظار الشموع...</div>;
  const visibleResistance=levels.resistance.slice(0,2),visibleSupport=levels.support.slice(0,2);
  const plottedLevels=[...visibleResistance,...visibleSupport];
- const values=[...bars.flatMap(x=>[x.low,x.high]),price,...plottedLevels.flatMap(x=>[x.lower,x.upper,x.price])].filter(Number.isFinite);
+ const values=[...bars.flatMap(x=>[x.low,x.high]),price,...plottedLevels.flatMap(x=>[x.lower,x.upper,x.price])].filter(v=>Number.isFinite(v)&&v>0);
  const rawLow=Math.min(...values),rawHigh=Math.max(...values),padding=Math.max((rawHigh-rawLow)*.06,price*.00015);
  const lo=rawLow-padding,hi=rawHigh+padding;
  const y=(v:number)=>15+(hi-v)/(hi-lo||1)*310,step=900/bars.length;
