@@ -163,12 +163,16 @@ export function calculateLevels(m5: Candle[], m15: Candle[], h1: Candle[], h4: C
     x.strength = score >= 12 ? "قوية" : score >= 6 ? "متوسطة" : "مراقبة";
     x.flipped = (x.side === "support" && x.price > price) || (x.side === "resistance" && x.price < price);
   });
+  // Main actionable levels come from 1h/4h market structure. The 5m and
+  // 15m pivots still contribute to confluence and event history, but tiny
+  // intraday swings must not crowd out the more meaningful levels.
+  const higherTimeframe = merged.filter(x => x.timeframes.includes("4h") || x.timeframes.includes("1h"));
+  const mediumTimeframe = merged.filter(x => x.timeframes.includes("15m"));
+  const primary = higherTimeframe.length ? higherTimeframe : mediumTimeframe.length ? mediumTimeframe : merged;
   return {
     all: merged,
-    // Show the nearest zones on each side of the live price, while preserving
-    // each pivot's original identity for breakout/breakdown event detection.
-    resistance: merged.filter(x => x.price > price).map(x => ({ ...x, flipped: x.side === "support" })).sort((a, b) => a.price - b.price).slice(0, 4),
-    support: merged.filter(x => x.price < price).map(x => ({ ...x, flipped: x.side === "resistance" })).sort((a, b) => b.price - a.price).slice(0, 4),
+    resistance: primary.filter(x => x.price > price).map(x => ({ ...x, flipped: x.side === "support" })).sort((a, b) => a.price - b.price).slice(0, 4),
+    support: primary.filter(x => x.price < price).map(x => ({ ...x, flipped: x.side === "resistance" })).sort((a, b) => b.price - a.price).slice(0, 4),
     atr: baseAtr,
   };
 }
