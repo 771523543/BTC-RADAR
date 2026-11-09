@@ -71,9 +71,7 @@ function frameLevels(candles: Candle[], frame: string, tolerance: number): Level
     let bestDistance = Infinity;
     for (const group of clusters) {
       if (group.side !== pivot.side) continue;
-      // Keep the level anchored to an observed candle pivot, not an invented average.
-    const orderedPrices = [...group.prices].sort((a, b) => a - b);
-    const centre = orderedPrices[Math.floor(orderedPrices.length / 2)];
+      const centre = group.prices.reduce((sum, value) => sum + value, 0) / group.prices.length;
       const distance = Math.abs(centre - pivot.price);
       if (distance <= tolerance && distance < bestDistance) { best = group; bestDistance = distance; }
     }
@@ -83,7 +81,9 @@ function frameLevels(candles: Candle[], frame: string, tolerance: number): Level
 
   const result: Level[] = [];
   for (const group of clusters) {
-    const centre = group.prices.reduce((sum, value) => sum + value, 0) / group.prices.length;
+    // Anchor each level to an observed pivot price, not a synthetic average.
+    const orderedPrices = [...group.prices].sort((a, b) => a - b);
+    const centre = orderedPrices[Math.floor(orderedPrices.length / 2)];
     const interactions: number[] = [];
     let lastInteraction = -10;
     for (let i = 0; i < c.length; i++) {
