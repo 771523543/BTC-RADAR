@@ -126,13 +126,13 @@ export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], p
   const closed = (items: Candle[]) => items.filter(x => x.closeTime < Date.now()).slice(-240);
   const currentClosed = closed(current);
   const baseAtr = atr(currentClosed);
-  const priceFloor = price > 0 ? price * 0.0008 : 0;
-  // Each timeframe gets its own volatility tolerance. Reusing the 5m/15m ATR
-  // for 1h and 4h used to make higher-timeframe zones too narrow or too wide.
-  const toleranceFor = (items: Candle[]) => Math.max(atr(closed(items)) * 0.35, priceFloor);
-  const currentTolerance = toleranceFor(current);
-  const h1Tolerance = toleranceFor(h1);
-  const h4Tolerance = toleranceFor(h4);
+  // Volatility controls zone width; small timeframe-specific price floors prevent
+  // low-volatility candles from producing zero-width zones without making 1m/5m
+  // levels as wide as higher-timeframe levels.
+  const toleranceFor = (items: Candle[], floorPct: number) => Math.max(atr(closed(items)) * 0.35, price > 0 ? price * floorPct : 0);
+  const currentTolerance = toleranceFor(current, 0.00018);
+  const h1Tolerance = toleranceFor(h1, 0.00028);
+  const h4Tolerance = toleranceFor(h4, 0.0004);
   const all = [
     ...frameLevels(current, currentFrame, currentTolerance),
     ...frameLevels(h1, "1h", h1Tolerance),
@@ -140,7 +140,7 @@ export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], p
   ].sort((a, b) => a.price - b.price);
 
   // Merge only nearby zones, using a conservative cross-timeframe tolerance.
-  const mergeTolerance = Math.max(price > 0 ? price * 0.00045 : 0, Math.min(currentTolerance, h1Tolerance, h4Tolerance) * 0.8);
+  const mergeTolerance = Math.max(price > 0 ? price * 0.0002 : 0, Math.min(currentTolerance, h1Tolerance, h4Tolerance) * 0.8);
   const merged: Level[] = [];
   for (const item of all) {
     const found = merged.find(x => x.side === item.side && Math.abs(x.price - item.price) <= mergeTolerance);
