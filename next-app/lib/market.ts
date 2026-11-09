@@ -1,7 +1,7 @@
 export type Market = "spot" | "futures";
 export type Interval = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
 export type Candle = { time: number; closeTime: number; open: number; high: number; low: number; close: number; volume: number };
-export type Level = { price: number; side: "support" | "resistance"; touches: number; timeframes: string[]; strength: string; lower: number; upper: number; flipped: boolean };
+export type Level = { price: number; side: "support" | "resistance"; touches: number; timeframes: string[]; strength: string; lower: number; upper: number; flipped: boolean; score: number };
 
 const hosts = (market: Market) => market === "futures"
   ? ["https://fapi.binance.com", "https://fapi1.binance.com", "https://fapi2.binance.com", "https://fapi3.binance.com"]
@@ -114,6 +114,7 @@ function frameLevels(candles: Candle[], frame: string, tolerance: number): Level
       touches: touchCount,
       timeframes: [frame],
       strength: score >= 10 ? "قوية" : score >= 5 ? "متوسطة" : "مراقبة",
+      score,
       lower,
       upper,
       flipped: false,
@@ -148,6 +149,7 @@ export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], p
       const totalTouches = found.touches + item.touches;
       found.price = (found.price * found.touches + item.price * item.touches) / totalTouches;
       found.touches = totalTouches;
+      found.score += item.score;
       if (!found.timeframes.includes(item.timeframes[0])) found.timeframes.push(item.timeframes[0]);
     }
   }
@@ -157,16 +159,17 @@ export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], p
     x.upper = x.price + zoneTolerance * 0.45;
     // A level gains weight from repeated reactions and agreement across frames.
     const frameBonus = x.timeframes.length >= 3 ? 2 : x.timeframes.length === 2 ? 1 : 0;
-    const score = x.touches + frameBonus;
-    x.strength = score >= 9 ? "قوية" : score >= 4 ? "متوسطة" : "مراقبة";
+    const score = x.score + frameBonus;
+    x.score = score;
+    x.strength = score >= 12 ? "قوية" : score >= 6 ? "متوسطة" : "مراقبة";
     x.flipped = (x.side === "support" && x.price > price) || (x.side === "resistance" && x.price < price);
   });
   return {
     all: merged,
     // Show the nearest zones on each side of the live price, while preserving
     // each pivot's original identity for breakout/breakdown event detection.
-    resistance: merged.filter(x => x.price > price).sort((a, b) => a.price - b.price).slice(0, 4),
-    support: merged.filter(x => x.price < price).sort((a, b) => b.price - a.price).slice(0, 4),
+    resistance: merged.filter(x => x.price > price).map(x => ({ ...x, flipped: x.side === "support" })).sort((a, b) => a.price - b.price).slice(0, 4),
+    support: merged.filter(x => x.price < price).map(x => ({ ...x, flipped: x.side === "resistance" })).sort((a, b) => b.price - a.price).slice(0, 4),
     atr: baseAtr,
   };
 }
