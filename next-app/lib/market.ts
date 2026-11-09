@@ -71,7 +71,9 @@ function frameLevels(candles: Candle[], frame: string, tolerance: number): Level
     let bestDistance = Infinity;
     for (const group of clusters) {
       if (group.side !== pivot.side) continue;
-      const centre = group.prices.reduce((sum, value) => sum + value, 0) / group.prices.length;
+      // Keep the level anchored to an observed candle pivot, not an invented average.
+    const orderedPrices = [...group.prices].sort((a, b) => a - b);
+    const centre = orderedPrices[Math.floor(orderedPrices.length / 2)];
       const distance = Math.abs(centre - pivot.price);
       if (distance <= tolerance && distance < bestDistance) { best = group; bestDistance = distance; }
     }
@@ -118,33 +120,38 @@ function frameLevels(candles: Candle[], frame: string, tolerance: number): Level
   }
   return result;
 }
-export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], price: number, currentFrame: string = "15m") {
+export function calculateLevels(m5: Candle[], m15: Candle[], h1: Candle[], h4: Candle[], price: number) {
   const closed = (items: Candle[]) => items.filter(x => x.closeTime < Date.now()).slice(-240);
-  const currentClosed = closed(current);
-  const baseAtr = atr(currentClosed);
-  // Volatility controls zone width; small timeframe-specific price floors prevent
-  // low-volatility candles from producing zero-width zones without making 1m/5m
-  // levels as wide as higher-timeframe levels.
+  const baseAtr = atr(closed(m15));
+  // Use a separate volatility tolerance for each timeframe, then require a
+  // tighter price match before calling pivots the same shared level.
   const toleranceFor = (items: Candle[], floorPct: number) => Math.max(atr(closed(items)) * 0.35, price > 0 ? price * floorPct : 0);
-  const currentTolerance = toleranceFor(current, 0.00018);
-  const h1Tolerance = toleranceFor(h1, 0.00028);
-  const h4Tolerance = toleranceFor(h4, 0.0004);
+  const t5 = toleranceFor(m5, 0.00012);
+  const t15 = toleranceFor(m15, 0.00016);
+  const t1h = toleranceFor(h1, 0.00022);
+  const t4h = toleranceFor(h4, 0.0003);
   const all = [
-    ...frameLevels(current, currentFrame, currentTolerance),
-    ...frameLevels(h1, "1h", h1Tolerance),
-    ...frameLevels(h4, "4h", h4Tolerance),
+    ...frameLevels(m5, "5m", t5),
+    ...frameLevels(m15, "15m", t15),
+    ...frameLevels(h1, "1h", t1h),
+    ...frameLevels(h4, "4h", t4h),
   ].sort((a, b) => a.price - b.price);
 
-  // Merge only nearby zones, using a conservative cross-timeframe tolerance.
-  const mergeTolerance = Math.max(price > 0 ? price * 0.0002 : 0, Math.min(currentTolerance, h1Tolerance, h4Tolerance) * 0.8);
+  // Confluence is counted only when independently detected candle pivots
+  // agree closely. Keep the representative price equal to a real pivot.
+  const mergeTolerance = Math.max(price > 0 ? price * 0.00015 : 0, Math.min(t5, t15, t1h, t4h) * 0.75);
+  const framePriority = (level: Level) => level.timeframes.includes("4h") ? 4 : level.timeframes.includes("1h") ? 3 : level.timeframes.includes("15m") ? 2 : 1;
   const merged: Level[] = [];
   for (const item of all) {
     const found = merged.find(x => x.side === item.side && Math.abs(x.price - item.price) <= mergeTolerance);
     if (!found) merged.push({ ...item });
     else {
-      const totalTouches = found.touches + item.touches;
-      found.price = (found.price * found.touches + item.price * item.touches) / totalTouches;
-      found.touches = totalTouches;
+      const existingPriority = framePriority(found);
+      const incomingPriority = framePriority(item);
+      if (incomingPriority > existingPriority || (incomingPriority === existingPriority && item.score > found.score)) {
+        found.price = item.price;
+      }
+      found.touches += item.touches;
       found.score += item.score;
       if (!found.timeframes.includes(item.timeframes[0])) found.timeframes.push(item.timeframes[0]);
     }
