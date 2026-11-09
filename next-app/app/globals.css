@@ -5,3 +5,34 @@
 
 .smart-chart-wrap{height:430px;position:relative;background:#0a1220;border:1px solid #1d2a3d;border-radius:12px;overflow:hidden}.smart-svg{width:100%;height:100%;display:block}.smart-levels-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}.big-level{font-size:32px;font-weight:700;direction:ltr;text-align:right;margin:12px 0}.alert-state{padding:11px 9px;border-bottom:1px solid #202d43}.alert-state b,.alert-state span{display:block}.alert-state b{font-size:12px;margin-bottom:4px}.alert-state span{font-size:11px;color:var(--muted);line-height:1.7}.alert-log{display:flex;flex-direction:column;gap:7px;max-height:380px;overflow:auto}.log-item{display:grid;grid-template-columns:90px 1fr;gap:10px;padding:10px;border-radius:9px;background:#0b1422;border-right:3px solid #68758b}.log-item.good{border-color:var(--green)}.log-item.warn{border-color:var(--gold)}.log-item.bad{border-color:var(--red)}.log-item time{font-size:10px;color:var(--muted);direction:ltr}.log-item b{font-size:11px;display:block;margin-bottom:3px}.log-item span{font-size:10px;color:var(--muted);line-height:1.6}.empty-log{color:var(--muted);font-size:11px;text-align:center;padding:20px}.clear-btn{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:8px;padding:7px 10px;font:inherit;font-size:11px;cursor:pointer}.disclaimer{padding:13px 16px;border:1px solid #4a422a;background:#211e16;border-radius:12px;color:#cfc39d;font-size:11px;line-height:1.8;margin:18px 0}.smart-shell footer a{display:flex;align-items:center;gap:5px;color:var(--muted);text-decoration:none}
 @media(max-width:760px){.smart-chart-wrap{height:330px}.smart-levels-grid{grid-template-columns:1fr}.big-level{font-size:27px}.log-item{grid-template-columns:1fr;gap:4px}}
+
+
+.decision-panel{margin:0 0 18px}
+.decision-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+.decision-heading h2{font-size:20px;margin:4px 0}
+.decision-chip{border:1px solid var(--line);border-radius:30px;padding:6px 13px;font-size:11px;color:var(--muted);white-space:nowrap}
+.decision-chip.good{color:var(--green);border-color:#276b56;background:#10271f}
+.decision-chip.bad{color:var(--red);border-color:#713b46;background:#2a171e}
+.decision-chip.warn{color:var(--gold);border-color:#75603a;background:#282216}
+.decision-main{border:1px solid var(--line);border-right:4px solid #6e7b8e;border-radius:12px;padding:15px;background:#0b1422}
+.decision-main strong{font-size:19px;line-height:1.6}
+.decision-main p{font-size:12px;color:var(--muted);margin:5px 0 0}
+.decision-main.good{border-right-color:var(--green)}
+.decision-main.bad{border-right-color:var(--red)}
+.decision-main.warn{border-right-color:var(--gold)}
+.trend-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:12px 0}
+.trend-grid div{background:#0b1422;border:1px solid #1e2b40;border-radius:10px;padding:11px}
+.trend-grid span,.trend-grid b{display:block}
+.trend-grid span{font-size:10px;color:var(--muted);margin-bottom:5px}
+.trend-grid b{font-size:13px}
+.scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.scenario-card{border:1px solid var(--line);border-radius:12px;padding:13px;background:#0b1422;min-width:0}
+.scenario-card.bull{border-top:3px solid var(--green)}
+.scenario-card.bear{border-top:3px solid var(--red)}
+.scenario-card h3{font-size:15px;margin:0 0 9px}
+.scenario-line{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid #202d43}
+.scenario-line span{font-size:11px;color:var(--muted)}
+.scenario-line b{font-size:11px;text-align:left;direction:rtl;overflow-wrap:anywhere}
+.scenario-card p{font-size:11px;line-height:1.7;color:var(--muted);margin:10px 0 0}
+.decision-note{font-size:11px;line-height:1.8;color:var(--muted);margin:12px 0 0}
+@media(max-width:760px){.decision-heading{align-items:flex-start}.decision-main strong{font-size:16px}.trend-grid{grid-template-columns:1fr 1fr}.scenario-grid{grid-template-columns:1fr}.scenario-line{align-items:flex-start}.scenario-line b{max-width:62%}}
