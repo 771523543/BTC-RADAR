@@ -1,7 +1,7 @@
 export type Market = "spot" | "futures";
 export type Interval = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
 export type Candle = { time: number; closeTime: number; open: number; high: number; low: number; close: number; volume: number };
-export type Level = { price: number; side: "support" | "resistance"; touches: number; timeframes: string[]; strength: string; lower: number; upper: number; flipped: boolean; score: number };
+export type Level = { price: number; side: "support" | "resistance"; touches: number; timeframes: string[]; strength: string; flipped: boolean; score: number };
 
 const hosts = (market: Market) => market === "futures"
   ? ["https://fapi.binance.com", "https://fapi1.binance.com", "https://fapi2.binance.com", "https://fapi3.binance.com"]
@@ -82,12 +82,10 @@ function frameLevels(candles: Candle[], frame: string, tolerance: number): Level
   const result: Level[] = [];
   for (const group of clusters) {
     const centre = group.prices.reduce((sum, value) => sum + value, 0) / group.prices.length;
-    const lower = centre - tolerance * 0.45;
-    const upper = centre + tolerance * 0.45;
     const interactions: number[] = [];
     let lastInteraction = -10;
     for (let i = 0; i < c.length; i++) {
-      if (c[i].high >= lower && c[i].low <= upper && i - lastInteraction > 2) {
+      if (c[i].high >= centre - tolerance * 0.45 && c[i].low <= centre + tolerance * 0.45 && i - lastInteraction > 2) {
         interactions.push(i);
         lastInteraction = i;
       }
@@ -115,8 +113,6 @@ function frameLevels(candles: Candle[], frame: string, tolerance: number): Level
       timeframes: [frame],
       strength: score >= 10 ? "قوية" : score >= 5 ? "متوسطة" : "مراقبة",
       score,
-      lower,
-      upper,
       flipped: false,
     });
   }
@@ -154,10 +150,6 @@ export function calculateLevels(current: Candle[], h1: Candle[], h4: Candle[], p
     }
   }
   merged.forEach(x => {
-    const zoneTolerance = Math.max(currentTolerance, ...x.timeframes.map(tf => tf === "4h" ? h4Tolerance : tf === "1h" ? h1Tolerance : currentTolerance));
-    x.lower = x.price - zoneTolerance * 0.45;
-    x.upper = x.price + zoneTolerance * 0.45;
-    // A level gains weight from repeated reactions and agreement across frames.
     const frameBonus = x.timeframes.length >= 3 ? 2 : x.timeframes.length === 2 ? 1 : 0;
     const score = x.score + frameBonus;
     x.score = score;
