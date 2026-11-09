@@ -85,7 +85,7 @@ function frameLevels(candles: Candle[], frame: string, tolerance: number): Level
     const interactions: number[] = [];
     let lastInteraction = -10;
     for (let i = 0; i < c.length; i++) {
-      if (c[i].high >= lower && c[i].low <= upper && i - lastInteraction > 2) {
+      if (c[i].high >= centre - tolerance * 0.45 && c[i].low <= centre + tolerance * 0.45 && i - lastInteraction > 2) {
         interactions.push(i);
         lastInteraction = i;
       }
