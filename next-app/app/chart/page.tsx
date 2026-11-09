@@ -66,13 +66,36 @@ export default function SmartChart(){
   setVolumeStatus((volumeRatio>=1.2?"حجم مرتفع":volumeRatio<.8?"حجم منخفض":"حجم قريب من المتوسط")+" · "+fmt(volumeRatio,2)+"x من متوسط 20 شمعة");
   if(volumeRatio>=1.2)addEvent("ارتفاع حجم التداول","الحجم "+fmt(volumeRatio,2)+"x من متوسط آخر 20 شمعة مكتملة","good");
   else if(volumeRatio<.8)addEvent("انخفاض حجم التداول","الحجم "+fmt(volumeRatio,2)+"x من متوسط آخر 20 شمعة مكتملة","warn");
-  // Keep a successful retest visible until the next completed candle,
-  // then resume monitoring; stale setups also stop blocking new signals.
+  // Scan the latest eight completed candles, not only the newest one.
+  // This also restores an active breakout when the page is opened after it happened.
   if(!lastBreak||lastBreak.retested||expired){
-      const crossedUp=levels.all.filter(x=>previous.close<=x.price&&last.close>x.price).sort((a,b)=>a.price-b.price)[0];
-   const crossedDown=levels.all.filter(x=>previous.close>=x.price&&last.close<x.price).sort((a,b)=>b.price-a.price)[0];
-   if(crossedUp){setLastBreak({side:"up",level:crossedUp.price,time:last.time,retested:false});addEvent("اختراق المقاومة بإغلاق شمعة","أغلق السعر فوق "+fmt(crossedUp.price)+" · حجم التداول "+fmt(volumeRatio,2)+"x من المتوسط"+(volumeRatio>=1.2?" (داعم للاختراق)":" (لم يؤكد الحجم الاختراق)")+"؛ راقب إعادة الاختبار","good");}
-   else if(crossedDown){setLastBreak({side:"down",level:crossedDown.price,time:last.time,retested:false});addEvent("كسر الدعم بإغلاق شمعة","أغلق السعر تحت "+fmt(crossedDown.price)+" · حجم التداول "+fmt(volumeRatio,2)+"x من المتوسط"+(volumeRatio>=1.2?" (داعم للكسر)":" (لم يؤكد الحجم الكسر)")+"؛ راقب إعادة الاختبار","bad");}
+   const recent=closed.slice(-9);
+   const candidates:{side:"up"|"down";level:number;time:number;index:number}[]=[];
+   for(let i=1;i<recent.length;i++){
+    const before=recent[i-1],bar=recent[i];
+    for(const level of levels.all){
+     if(before.close<=level.price&&bar.close>level.price)candidates.push({side:"up",level:level.price,time:bar.time,index:i});
+     else if(before.close>=level.price&&bar.close<level.price)candidates.push({side:"down",level:level.price,time:bar.time,index:i});
+    }
+   }
+   const candidate=candidates.sort((a,b)=>a.time-b.time).at(-1);
+   if(candidate&&(!lastBreak||candidate.time>lastBreak.time)){
+    const stillValid=candidate.side==="up"?last.close>candidate.level:last.close<candidate.level;
+    if(stillValid){
+     const retestBand=Math.max(atr(closed)*.15,price*.00035);
+     const retested=recent.slice(candidate.index+1).some(bar=>candidate.side==="up"
+      ?bar.low<=candidate.level+retestBand&&bar.close>candidate.level
+      :bar.high>=candidate.level-retestBand&&bar.close<candidate.level);
+     setLastBreak({side:candidate.side,level:candidate.level,time:candidate.time,retested});
+     const barsAgo=recent.length-1-candidate.index;
+     const detail=(barsAgo===0?"أغلقت آخر شمعة":"حدث قبل "+barsAgo+" شمعة مكتملة")+
+      (candidate.side==="up"?" فوق المقاومة ":" تحت الدعم ")+fmt(candidate.level)+
+      " · الحجم "+fmt(volumeRatio,2)+"x من المتوسط"+
+      (volumeRatio>=1.2?" (داعم)":" (الحجم لا يؤكد وحده)")+
+      (retested?" · رُصدت إعادة اختبار ناجحة":" · "+(barsAgo===0?"راقب إعادة الاختبار":"الاختراق ما زال قائماً؛ راقب إعادة الاختبار"));
+     addEvent(candidate.side==="up"?(barsAgo===0?"اختراق المقاومة بإغلاق شمعة":"اختراق سابق ما زال قائماً"):(barsAgo===0?"كسر الدعم بإغلاق شمعة":"كسر سابق ما زال قائماً"),detail,candidate.side==="up"?"good":"bad");
+    }
+   }
   }
  },[last?.time,levels.all,avgVol,addEvent,lastBreak,interval]);
  useEffect(()=>{
