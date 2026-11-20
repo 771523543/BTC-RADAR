@@ -1,0 +1,16 @@
+{
+  "id": "/BTC-RADAR/",
+  "name": "BTC RADAR",
+  "short_name": "BTC RADAR",
+  "description": "رادار البيتكوين لمراقبة السوق وتحليل BTCUSDT",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/BTC-RADAR/",
+  "scope": "/BTC-RADAR/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#080d18",
+  "theme_color": "#080d18",
+  "categories": ["finance", "utilities"],
+  "icons": [{"src": "/BTC-RADAR/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable"}]
+}
