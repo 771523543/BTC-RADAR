@@ -1,7 +1,7 @@
 "use client";
 
-import PaperTradingPage from "./paper-trading/page";
+import PaperTrading from "../components/PaperTrading";
 
 export default function Home() {
-  return <PaperTradingPage />;
+  return <PaperTrading />;
 }
