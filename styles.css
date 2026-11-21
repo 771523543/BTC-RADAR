@@ -34,3 +34,21 @@ body{background:radial-gradient(ellipse at 85% -15%,#e4edfb 0,transparent 42%),v
 .notify-btn,.clear-btn{background:#edf2f8;color:#40536f;border-color:#d7e0ec}
 .log-item{border-right-color:#94a3b8}
 .log-item.good{border-color:var(--green)}.log-item.warn{border-color:var(--gold)}.log-item.bad{border-color:var(--red)}
+
+
+/* Complete light card surfaces */
+.panel{background:#fff!important;color:#172033;border-color:#dce3ed;box-shadow:0 8px 26px #2538580b}
+.price-panel,.analysis-panel,.levels-panel,.metric-panel,.orderbook-panel,.scenario-panel,.risk-panel,.alerts-panel{background:#fff}
+.level-row,.current-level,.metric,.scenario-grid>div,.risk-results>div,.confirmation-grid>div,.log-item,.level-card,.level-current{background:#f5f7fb!important;color:#172033;border-color:#e1e7ef}
+.signal-box{background:#f1f5fb!important;border-color:#dbe4f0!important}
+.indicator-list>div,.alert-state{border-color:#e6ebf2!important}
+.market-switch,.timeframes{background:#edf1f7!important;border-color:#dce3ed!important}
+.market-switch button.active,.timeframes button.active{background:#dce7f7!important;color:#17345f!important}
+.current-level,.level-current{background:#e7eef9!important;color:#1d3558!important}
+.scenario-state,.tiny-tag,.tag{background:#edf2f8;color:#526783}
+.rule-note,.alert-help,.disclaimer{background:#fff8e8!important;border-color:#efdfb8!important;color:#785b20!important}
+.risk-inputs input{background:#fff!important;color:#172033!important;border-color:#d5deea!important}
+.notify-btn,.clear-btn{background:#edf2f8!important;color:#40536f!important;border-color:#d7e0ec!important}
+.log-item{background:#f5f7fb!important}
+.asks .book-row{background:linear-gradient(270deg,#f9dfe4 var(--depth),#f4f7fb var(--depth))!important}
+.bids .book-row{background:linear-gradient(270deg,#d9f2e9 var(--depth),#f4f7fb var(--depth))!important}
