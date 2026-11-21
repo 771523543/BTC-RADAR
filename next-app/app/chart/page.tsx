@@ -35,8 +35,8 @@ export default function SmartChart(){
  const addEvent=useCallback((title:string,detail:string,tone:EventItem["tone"])=>{setEvents(old=>[{id:++eventId.current,time:new Date().toLocaleTimeString("ar"),title,detail,tone},...old].slice(0,35));if(permission&&"Notification"in window&&Notification.permission==="granted")new Notification("BTC RADAR · "+title,{body:detail});},[permission]);
  const refresh=useCallback(async()=>{setBusy(true);try{const root=market==="futures"?"/fapi/v1":"/api/v3";const [t,c,c5,c15,a,b]=await Promise.all([binance<Ticker>(market,root+"/ticker/24hr?symbol=BTCUSDT"),binance<unknown[][]>(market,root+"/klines?symbol=BTCUSDT&interval="+interval+"&limit=300"),binance<unknown[][]>(market,root+"/klines?symbol=BTCUSDT&interval=5m&limit=300"),binance<unknown[][]>(market,root+"/klines?symbol=BTCUSDT&interval=15m&limit=300"),binance<unknown[][]>(market,root+"/klines?symbol=BTCUSDT&interval=1h&limit=240"),binance<unknown[][]>(market,root+"/klines?symbol=BTCUSDT&interval=4h&limit=240")]);setTicker(t);setCandles(parseCandles(c));setM5(parseCandles(c5));setM15(parseCandles(c15));setH1(parseCandles(a));setH4(parseCandles(b));setConnected(true);setError("");if(market==="futures"){
  const results=await Promise.allSettled([
-  binance<{symbol:string;markPrice:string;lastFundingRate:string;time:number}>(market,"/fapi/v1/premiumIndex?symbol=BTCUSDT"),
-  binance<{symbol:string;openInterest:string;time:number}>(market,"/fapi/v1/openInterest?symbol=BTCUSDT"),
+  binance<{symbol:string;markPrice:string;lastFundingRate:string;time:number}>(market,"/premiumIndex?symbol=BTCUSDT"),
+  binance<{symbol:string;openInterest:string;time:number}>(market,"/openInterest?symbol=BTCUSDT"),
   binance<{symbol:string;longShortRatio:string;longAccount:string;shortAccount:string;timestamp:number}[]>(market,"/futures/data/globalLongShortAccountRatio?symbol=BTCUSDT&period=15m&limit=1")
  ]);
  const premium=results[0].status==="fulfilled"?results[0].value:null;
