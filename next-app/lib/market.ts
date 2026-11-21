@@ -37,6 +37,7 @@ export function rsi(values: number[], period = 14): number | null {
   for (let i = 1; i <= period; i++) { const d = values[i] - values[i - 1]; if (d > 0) gain += d; else loss -= d; }
   let avgGain = gain / period, avgLoss = loss / period;
   for (let i = period + 1; i < values.length; i++) { const d = values[i] - values[i - 1]; avgGain = (avgGain * (period - 1) + Math.max(d, 0)) / period; avgLoss = (avgLoss * (period - 1) + Math.max(-d, 0)) / period; }
+  if (avgGain === 0 && avgLoss === 0) return 50;
   return avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
 }
 export function atr(candles: Candle[], period = 14): number {
@@ -103,7 +104,8 @@ function frameLevels(candles: Candle[], frame: string, tolerance: number): Level
         : bar.close <= centre - rangeAtr * 0.35);
       if (rejected) reactions++;
     }
-    const touchCount = Math.max(interactions.length, group.indexes.length);
+    // Count confirmed swing pivots and rejected retests, not every candle that merely crossed the zone.
+    const touchCount = Math.max(group.indexes.length, reactions);
     const recency = group.indexes.length
       ? Math.max(...group.indexes) / Math.max(1, c.length - 1)
       : 0;
