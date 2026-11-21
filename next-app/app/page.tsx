@@ -1,7 +1,7 @@
 "use client";
 
-import SmartChart from "./chart/page";
+import PaperTradingPage from "./paper-trading/page";
 
 export default function Home() {
-  return <SmartChart />;
+  return <PaperTradingPage />;
 }
