@@ -23,6 +23,7 @@ export default function PaperTradingPage(){
  const reset=()=>{if(window.confirm("هل تريد تصفير الحساب التجريبي وحذف سجل الصفقات؟")){setAccount(blank());setAmount("100");setNotice("عاد الحساب إلى 10,000 USDT افتراضية.");}};
  return <main className="shell paper-only">
   <section className="paper-section-head"><div><div className="eyebrow">محاكاة تعليمية · لا أموال حقيقية</div><h2>التداول التجريبي</h2><p>طبّق ما تعلمته من التحليل على شراء وبيع افتراضيين، وتابع أثر حركة السعر على رصيدك.</p></div><span className={"paper-live "+(connected?"online":"")}>{connected?"السعر متصل":"بانتظار السعر"}</span></section>
+  <section className="paper-live-price panel"><div><span>سعر البيتكوين المباشر · BTC/USDT</span><strong>{price?money(price)+" USDT":"جارٍ تحميل السعر..."}</strong></div><span className={"paper-live "+(connected?"online":"")}>{connected?"● متصل الآن":"○ غير متصل"}</span></section>
   <section className="paper-account-grid">
    <article className="panel paper-balance"><span className="muted">إجمالي قيمة الحساب</span><strong>{money(equity)} <small>USDT</small></strong><span className={"paper-pnl "+(totalPnl>=0?"positive":"negative")}>{totalPnl>=0?"+":""}{money(totalPnl)} USDT · الربح/الخسارة الكلي</span></article>
    <article className="panel paper-stat"><span className="muted">الرصيد النقدي</span><strong>{money(account.cash)} <small>USDT</small></strong></article>
