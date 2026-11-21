@@ -143,6 +143,20 @@ export default function SmartChart(){
  const bearTarget=levels.support.find(x=>s&&x.price<s.price);
  const bullStatus=lastBreak?.side==="up"?(lastBreak.retested?"تمت إعادة الاختبار بنجاح؛ راقب الثبات فوق المستوى":"تم الإغلاق فوق المستوى؛ انتظر إعادة الاختبار"):r?"انتظار إغلاق شمعة "+interval+" فوق "+fmt(r.price):"لا يوجد مستوى مقاومة صالح في البيانات";
  const bearStatus=lastBreak?.side==="down"?(lastBreak.retested?"تمت إعادة الاختبار بنجاح؛ راقب استمرار الرفض":"تم الإغلاق تحت المستوى؛ انتظر إعادة الاختبار"):s?"انتظار إغلاق شمعة "+interval+" تحت "+fmt(s.price):"لا يوجد مستوى دعم صالح في البيانات";
+ const actionPlan=lastBreak
+  ? lastBreak.side==="up"
+   ? lastBreak.retested
+    ? {title:"تم الاختراق الصاعد ونجحت إعادة الاختبار",step:"لا تطارد شمعة الاختراق. راقب شمعة جديدة: إذا بقي الإغلاق فوق "+fmt(lastBreak.level)+" وظهر طلب/حجم مناسب، يمكنك تقييم فرصة شراء فورية بحجم محسوب؛ لا تدخل لمجرد أن الاختراق حدث.",cancel:"ألغِ السيناريو إذا أغلقت شمعة "+interval+" مجددًا تحت "+fmt(lastBreak.level)+" أو ظهر رفض بيعي قوي."}
+    : {title:"تم اختراق المقاومة — إعادة الاختبار لم تتأكد",step:"الآن لا تدخل مباشرة. انتظر رجوع السعر إلى "+fmt(lastBreak.level)+"؛ إذا لمس المنطقة ثم أغلقت شمعة "+interval+" فوقها، تصبح إعادة الاختبار ناجحة ويمكنك بعدها تقييم الدخول. إذا لم يعد للمستوى فلا تطارد السعر.",cancel:"إذا أغلقت شمعة "+interval+" تحت "+fmt(lastBreak.level)+" فاعتبر الاختراق فاشلًا وأوقف السيناريو."}
+   : lastBreak.retested
+    ? {title:"تم كسر الدعم ونجحت إعادة الاختبار",step:"لا تطارد الهبوط. راقب شمعة جديدة: إذا بقي الإغلاق تحت "+fmt(lastBreak.level)+" وظهر ضغط بيع/حجم مناسب، يمكنك تقييم فرصة بيع فقط إذا كنت تستخدم العقود وتفهم مخاطرها؛ في السوق الفوري تجنب فتح بيع مكشوف.",cancel:"ألغِ السيناريو إذا أغلقت شمعة "+interval+" مجددًا فوق "+fmt(lastBreak.level)+" أو استعاد السعر المنطقة بقوة."}
+    : {title:"تم كسر الدعم — إعادة الاختبار لم تتأكد",step:"لا تتسرع بالبيع. انتظر عودة السعر إلى "+fmt(lastBreak.level)+"؛ إذا فشل في استعادة المستوى وأغلقت شمعة "+interval+" تحته، تصبح إعادة الاختبار ناجحة. إذا واصل الهبوط دون رجوع فلا تطارده.",cancel:"إذا أغلقت شمعة "+interval+" فوق "+fmt(lastBreak.level)+" فاعتبر الكسر فاشلًا وأوقف السيناريو."}
+  : nearResistance
+   ? {title:"السعر قريب من المقاومة ولم يخترقها بعد",step:"لا تشتري لمجرد الاقتراب. راقب أحد أمرين: إغلاق "+interval+" فوق المقاومة ثم إعادة اختبار ناجحة، أو ظهور رفض بيعي واضح وإغلاق أسفل منطقة المقاومة؛ عندها أعد تقييم السيناريو.",cancel:"لا تعتمد على ذيل الشمعة وحده؛ انتظر الإغلاق ولا تدخل داخل منطقة غير واضحة."}
+   : nearSupport
+    ? {title:"السعر قريب من الدعم ولم يكسره بعد",step:"لا تبيع لمجرد الاقتراب. راقب ارتدادًا بإغلاق "+interval+" أعلى الدعم، أو كسرًا بإغلاق تحته ثم إعادة اختبار فاشلة؛ بعد ظهور أحدهما أعد تقييم السيناريو.",cancel:"إذا بقي السعر يتذبذب حول الدعم دون إغلاق واضح، انتظر ولا تتخذ قرارًا متسرعًا."}
+    : {title:"لا توجد إشارة تنفيذ واضحة الآن",step:"ابقَ خارج الصفقة وانتظر اقتراب السعر من دعم أو مقاومة، أو ظهور اختراق/كسر يتبعه إعادة اختبار. لا تدخل في منتصف النطاق لمجرد حركة السعر.",cancel:"أعد التقييم عند إغلاق شمعة جديدة أو تغير الاتجاه والحجم."};
+
  return <main className="shell"><header className="topbar"><a className="brand" href="/BTC-RADAR/"><span className="brand-icon">₿</span><span><b>BTC RADAR</b><small>رادار السوق والتحليل</small></span></a><nav className="smart-nav"><a className="active" href="/BTC-RADAR/">لوحة التحليل الموحدة</a><a href="/BTC-RADAR/breakout/">رادار الكسر</a></nav><div className={"connection "+(connected?"online":"offline")}><i/>{connected?"متصل ببيانات Binance":"بانتظار الاتصال"}</div><button className="refresh" onClick={()=>void refresh()} disabled={busy}><RefreshCw size={16}/> تحديث</button></header>
  <section className="hero"><div><div className="eyebrow">شارت مباشر متزامن مع Binance</div><h1>الشارت الذكي <span>BTCUSDT</span></h1><p>مستويات موحّدة من قمم وقيعان 5د و15د وساعة و4 ساعات، والسعر المرجعي واحد للشارت والتنبيهات والسيناريوهات.</p></div><div className="market-toggle"><button className={market==="spot"?"selected":""} onClick={()=>{setMarket("spot");setLastBreak(null);}}>Spot فوري</button><button className={market==="futures"?"selected":""} onClick={()=>{setMarket("futures");setLastBreak(null);}}>Futures عقود</button></div></section>
  {error&&<div className="error-banner"><WifiOff size={16}/>{error}</div>}
@@ -151,6 +165,12 @@ export default function SmartChart(){
  <section className="decision-panel panel">
   <div className="decision-heading"><div><div className="eyebrow">قراءة آلية للسوق · BTCUSDT</div><h2>ماذا يحدث الآن؟</h2></div><span className={"decision-chip "+decisionTone}>{decisionTone==="good"?"إشارة مرصودة":decisionTone==="bad"?"إشارة هبوط":decisionTone==="warn"?"مراقبة":"انتظار"}</span></div>
   <div className={"decision-main "+decisionTone}><strong>{decisionTitle}</strong><p>{lastBreak?"المستوى المرصود "+fmt(lastBreak.level)+" · "+(lastBreak.retested?"إعادة الاختبار مرصودة":"إعادة الاختبار لم تكتمل"):nearResistance?"المقاومة القريبة "+fmt(r!.price):nearSupport?"الدعم القريب "+fmt(s!.price):"لا توجد إشارة اختراق أو كسر مكتملة الآن"}</p></div>
+  <div className="panel" style={{marginTop:16,border:"1px solid var(--border)"}}>
+   <div className="section-head"><div><h3>ماذا أفعل الآن؟</h3><p className="muted">خطوة عملية مشروطة بما رصده السوق، وليست أمر شراء أو بيع</p></div></div>
+   <div className="alert-state"><b>{actionPlan.title}</b><span>{actionPlan.step}</span></div>
+   <div className="alert-state"><b>متى ألغي الفكرة؟</b><span>{actionPlan.cancel}</span></div>
+   <p className="decision-note">قبل أي صفقة: حدد نقطة إلغاء الفكرة وحجم خسارة مقبولًا مسبقًا، ولا تستخدم الرافعة لمجرد ظهور إشارة. إذا لم يتحقق الشرط فلا توجد صفقة.</p>
+  </div>
   <div className="trend-grid"><div><span>اتجاه الساعة</span><b>{trendLabel(trend1h)}</b></div><div><span>اتجاه 4 ساعات</span><b>{trendLabel(trend4h)}</b></div><div><span>الخلاصة</span><b>{overallTrend==="up"?"توافق صاعد":overallTrend==="down"?"توافق هابط":"غير متوافق"}</b></div></div>
   <div className="panel" style={{marginTop:16}}>
    <div className="section-head"><div><h3>قراءة حركة السوق</h3><p className="muted">تحليل تلقائي للاتجاه والشمعة والزخم والحجم؛ وليس مجرد انتظار كسر المستوى</p></div></div>
