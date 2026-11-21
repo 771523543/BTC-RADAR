@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { binance } from "@/lib/market";
 import { RotateCcw, ShoppingCart, TrendingDown } from "lucide-react";
-import { SmartChart } from "../chart/page";
+import { SmartChart } from "../../components/SmartChart";
 
 type Trade={id:number;side:"buy"|"sell";price:number;qty:number;total:number;fee:number;time:string;pnl?:number};
 type Account={cash:number;btc:number;averageEntry:number;realized:number;trades:Trade[]};
