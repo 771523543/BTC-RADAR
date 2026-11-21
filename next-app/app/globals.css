@@ -204,3 +204,11 @@ footer{color:var(--muted)}
 .paper-only footer{margin:18px 0 4px}
 @media(max-width:900px){.paper-account-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.paper-account-grid .paper-balance{grid-column:1/-1}}
 @media(max-width:600px){.paper-section-head{align-items:flex-start}.paper-section-head h2{font-size:20px}.paper-account-grid{grid-template-columns:1fr 1fr;gap:7px}.paper-account-grid .panel{padding:11px}.paper-balance strong{font-size:23px}.paper-stat strong{font-size:15px}.paper-estimate{grid-template-columns:1fr}.paper-estimate span{flex-direction:row;justify-content:space-between;align-items:center}.paper-estimate b{text-align:left}.paper-only{padding-top:0}.paper-tabs button{font-size:12px}}
+
+
+/* Prominent live BTC price on paper trading page */
+.paper-live-price{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 16px;padding:16px 18px;background:linear-gradient(110deg,#14243a,#101a2a);border:1px solid #263b57;border-radius:14px}
+.paper-live-price>div{display:flex;flex-direction:column;gap:7px}
+.paper-live-price>div>span{font-size:11px;color:var(--muted)}
+.paper-live-price strong{font-size:clamp(25px,5vw,36px);font-weight:800;letter-spacing:.2px;color:var(--text);direction:ltr;text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:480px){.paper-live-price{padding:13px;align-items:flex-start}.paper-live-price strong{font-size:25px}.paper-live-price .paper-live{font-size:10px;padding:6px 8px}}
