@@ -22,11 +22,12 @@ function pattern(c:C[],price:number):Pattern{
  let found:{name:string;kind:"bull"|"bear";score:number;type:string;signal:C;individual:boolean}|null=null;
  // Individual patterns are tested on the penultimate candle so the following candle is available for confirmation.
  const one=p, ob=body(one), or=range(one), ou=upper(one), ol=lower(one);
- if(ol>=Math.max(ob*2,or*.45)&&ou<=or*.25&&ob/or<.42)found={name:"Hammer",kind:"bull",score:1.7,type:"انعكاسي",signal:one,individual:true};
- else if(ou>=Math.max(ob*2,or*.45)&&ol<=or*.25&&ob/or<.42)found={name:"Inverted Hammer",kind:"bull",score:1.5,type:"انعكاسي",signal:one,individual:true};
- else if(ou>=Math.max(ob*2,or*.45)&&ol<=or*.25&&ob/or<.42&&bear(one))found={name:"Shooting Star",kind:"bear",score:1.7,type:"انعكاسي",signal:one,individual:true};
- else if(ol>=Math.max(ob*2,or*.45)&&ou<=or*.25&&ob/or<.42&&bear(one))found={name:"Hanging Man",kind:"bear",score:1.5,type:"انعكاسي",signal:one,individual:true};
- else if(ob/or<.1)found={name:"Doji",kind:bear(q)? "bull":"bear",score:1,type:"انعكاسي",signal:one,individual:true};
+ const priorDown=q.close<r.close,priorUp=q.close>r.close;
+ if(ol>=Math.max(ob*2,or*.45)&&ou<=or*.25&&ob/or<.42&&priorDown)found={name:"Hammer",kind:"bull",score:1.7,type:"انعكاسي",signal:one,individual:true};
+ else if(ou>=Math.max(ob*2,or*.45)&&ol<=or*.25&&ob/or<.42&&priorDown)found={name:"Inverted Hammer",kind:"bull",score:1.5,type:"انعكاسي",signal:one,individual:true};
+ else if(ou>=Math.max(ob*2,or*.45)&&ol<=or*.25&&ob/or<.42&&priorUp)found={name:"Shooting Star",kind:"bear",score:1.7,type:"انعكاسي",signal:one,individual:true};
+ else if(ol>=Math.max(ob*2,or*.45)&&ou<=or*.25&&ob/or<.42&&priorUp)found={name:"Hanging Man",kind:"bear",score:1.5,type:"انعكاسي",signal:one,individual:true};
+ else if(ob/or<.1)found={name:"Doji",kind:priorDown?"bull":priorUp?"bear":"neutral",score:1,type:"انعكاسي",signal:one,individual:true};
  // Multi-candle reversal and continuation patterns end on the latest closed candle.
  if(!found&&bear(p)&&bull(x)&&x.open<=p.close&&x.close>=p.open&&body(x)>body(p))found={name:"Bullish Engulfing",kind:"bull",score:2,type:"انعكاسي",signal:x,individual:false};
  if(!found&&bull(p)&&bear(x)&&x.open>=p.close&&x.close<=p.open&&body(x)>body(p))found={name:"Bearish Engulfing",kind:"bear",score:2,type:"انعكاسي",signal:x,individual:false};
