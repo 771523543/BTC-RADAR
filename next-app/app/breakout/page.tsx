@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Bell, RefreshCw, Wifi, WifiOff } from "lucide-react";
-import { atr, binance, calculateLevels, parseCandles, type Candle, type Interval, type Market } from "@/lib/market";
+import { atr, binance, calculateLevels, ema, parseCandles, rsi, type Candle, type Interval, type Market } from "@/lib/market";
 
 const intervals: Interval[] = ["5m", "15m", "1h", "4h"];
 const fmt = (v: number, d = 2) => Number.isFinite(v) ? v.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d }) : "—";
@@ -51,6 +51,19 @@ export default function BreakoutMonitorPage() {
   const last = closed.at(-1);
   const averageVolume = closed.length >= 21 ? closed.slice(-21, -1).reduce((sum, c) => sum + c.volume, 0) / 20 : 0;
   const volumeRatio = last && averageVolume > 0 ? last.volume / averageVolume : 0;
+  const closes = closed.map(c => c.close);
+  const ema20 = ema(closes, 20).at(-1) || 0;
+  const ema50 = ema(closes, 50).at(-1) || 0;
+  const momentumRsi = rsi(closes);
+  const trend = ema20 && ema50 ? (ema20 > ema50 && price > ema20 ? "up" : ema20 < ema50 && price < ema20 ? "down" : "mixed") : "mixed";
+  const candleRange = last ? Math.max(last.high - last.low, 0.0000001) : 0;
+  const upperWick = last ? last.high - Math.max(last.open, last.close) : 0;
+  const lowerWick = last ? Math.min(last.open, last.close) - last.low : 0;
+  const candleRead = !last ? "بانتظار شمعة مكتملة" : last.close > last.open
+    ? (lowerWick > candleRange * .35 ? "شمعة صاعدة مع ذيل سفلي؛ ظهر شراء من الأسعار المنخفضة." : "شمعة صاعدة؛ الإغلاق أعلى من الافتتاح.")
+    : last.close < last.open
+      ? (upperWick > candleRange * .35 ? "شمعة هابطة مع ذيل علوي؛ ظهر ضغط بيع من الأسعار المرتفعة." : "شمعة هابطة؛ الإغلاق أدنى من الافتتاح.")
+      : "شمعة متعادلة؛ لا يوجد تفوق واضح بين المشترين والبائعين.";
 
   const refresh = useCallback(async () => {
     setBusy(true);
@@ -149,12 +162,47 @@ export default function BreakoutMonitorPage() {
               : nearSupport
                 ? { title: "السعر يقترب من الدعم", detail: "الدعم الأقرب " + fmt(support?.price || 0) + " USDT ويبعد " + fmt(distanceDown ?? 0, 3) + "% عن السعر. لم يتأكد أي كسر بعد.", action: "راقب إغلاق شمعة " + interval + " تحت " + fmt(support?.price || 0) + " USDT؛ مجرد ملامسة الخط لا تكفي.", tone: "warn", label: "مراقبة الدعم" }
                 : { title: "السعر يتحرك بين الدعم والمقاومة", detail: "لا يوجد كسر مؤكد حاليًا. المقاومة " + (resistance ? fmt(resistance.price) + " (تبعد " + fmt(distanceUp ?? 0, 3) + "%)" : "غير متاحة") + "، والدعم " + (support ? fmt(support.price) + " (يبعد " + fmt(distanceDown ?? 0, 3) + "%)" : "غير متاح") + ".", action: "انتظر اقتراب السعر من أحد المستويين أو إغلاق شمعة خارجه؛ لا توجد إشارة كسر الآن.", tone: "neutral", label: "داخل النطاق" };
+  const nextTarget = event?.side === "up"
+    ? levels.resistance.find(level => level.price > event.level + Math.max(levels.atr * .1, price * .0002))
+    : event?.side === "down"
+      ? [...levels.support].reverse().find(level => level.price < event.level - Math.max(levels.atr * .1, price * .0002))
+      : undefined;
+  const volumeStrong = event ? event.volumeRatio >= 1.2 : volumeRatio >= 1.2;
+  const actionAdvice = !price || !last
+    ? { title: "لا تتخذ قرارًا قبل اكتمال البيانات", step: "انتظر تحميل السعر والشموع والمستويات؛ لا تعتمد على قراءة ناقصة.", cancel: "إذا بقيت البيانات غير متاحة، لا تستخدم هذا الرصد." }
+    : event && eventStillValid
+      ? event.side === "up"
+        ? event.retested
+          ? { title: "الاختراق أعاد اختبار المستوى بنجاح", step: "لا تطارد شمعة الصعود. انتظر شمعة مكتملة أخرى تثبت فوق " + fmt(event.level) + " USDT مع حجم تداول داعم؛ بعدها قيّم فرصة شراء فورية فقط إذا كانت خطتك تسمح ومخاطرتك محددة.", cancel: "ألغِ السيناريو إذا أغلقت شمعة " + interval + " تحت " + fmt(event.level) + " USDT. الهدف الفني التالي: " + (nextTarget ? fmt(nextTarget.price) + " USDT" : "لا يوجد مستوى تالٍ واضح") + "." }
+          : { title: "اختراق أولي — لا تدخل لمجرد الإغلاق", step: "انتظر رجوع السعر إلى " + fmt(event.level) + " USDT. إذا اختبره وأغلق فوقه فهذه إعادة اختبار ناجحة؛ إذا ابتعد دون اختبار فلا تطارد السعر.", cancel: "ألغِ الاختراق إذا أغلقت شمعة " + interval + " تحت " + fmt(event.level) + " USDT." }
+        : event.retested
+          ? { title: "الكسر أعاد اختبار المستوى بنجاح", step: market === "futures" ? "لا تطارد الهبوط. انتظر شمعة مكتملة أخرى تثبت تحت " + fmt(event.level) + "؛ بعدها قيّم البيع فقط إن كنت تفهم مخاطر العقود وتحدد خسارتك مسبقًا." : "في Spot لا تفتح بيعًا مكشوفًا. انتظر فرصة شراء لاحقة عند دعم جديد أو ابقَ خارج السوق حتى تتضح الحركة.", cancel: "ألغِ السيناريو إذا أغلقت شمعة " + interval + " فوق " + fmt(event.level) + " USDT. الهدف الفني التالي: " + (nextTarget ? fmt(nextTarget.price) + " USDT" : "لا يوجد مستوى تالٍ واضح") + "." }
+          : { title: "كسر أولي — انتظر إعادة الاختبار", step: "انتظر عودة السعر إلى " + fmt(event.level) + " USDT وفشله في استعادته بإغلاق شمعة تحته. لا تطارد شمعة الهبوط.", cancel: "ألغِ الكسر إذا أغلقت شمعة " + interval + " فوق " + fmt(event.level) + " USDT." }
+      : eventFailedNow
+        ? { title: "الاختراق أو الكسر السابق فشل", step: "تجاهل الإشارة القديمة وأعد تقييم أقرب دعم ومقاومة. لا تعكس الصفقة مباشرة؛ انتظر إشارة جديدة مكتملة.", cancel: "لا تعتمد على المستوى السابق حتى يظهر كسر جديد مع إغلاق وإعادة اختبار." }
+        : nearResistance
+          ? { title: "السعر يختبر منطقة مقاومة", step: "لا تشترِ لمجرد الاقتراب. انتظر إما إغلاقًا فوق المقاومة ثم إعادة اختبار ناجحة، أو رفضًا واضحًا وإغلاقًا هابطًا قبل التفكير في سيناريو آخر.", cancel: "إذا أغلق السعر فوق المقاومة ثم ثبت عليها، ألغِ فكرة الرفض." }
+          : nearSupport
+            ? { title: "السعر يختبر منطقة دعم", step: "لا تبع لمجرد الاقتراب. انتظر إما ارتدادًا وإغلاقًا فوق الدعم، أو كسرًا بإغلاق تحته ثم إعادة اختبار فاشلة.", cancel: "إذا أغلق السعر تحت الدعم وثبت تحته، ألغِ فكرة الارتداد." }
+            : { title: "لا توجد فرصة كسر واضحة الآن", step: "ابقَ خارج الصفقة وانتظر اقتراب السعر من أحد المستويات أو إغلاقًا واضحًا خارجه. التداول وسط النطاق غالبًا يعطي نسبة عائد إلى مخاطرة أضعف.", cancel: "لا تدخل حتى يتحدد مستوى التأكيد ونقطة إلغاء الفكرة والهدف قبل الصفقة." };
   return <main className="shell breakout-page">
     <header className="topbar"><Link className="brand" href="/"><span className="brand-icon">₿</span><span><b>BTC RADAR</b><small>رادار السوق والتحليل</small></span></Link><nav className="smart-nav"><Link href="/">لوحة التحليل</Link><Link className="active" href="/breakout/">رادار الكسر</Link></nav><div className={"connection " + (connected ? "online" : "offline")}><i />{connected ? "متصل ببيانات Binance" : "بانتظار الاتصال"}</div><button className="refresh" onClick={() => void refresh()} disabled={busy}><RefreshCw size={16} /> تحديث</button></header>
     <section className="hero"><div><div className="eyebrow">مراقبة مباشرة للاتجاهين</div><h1>رادار كسر الدعم والمقاومة <span>BTCUSDT</span></h1><p>شارت واحد يراقب اختراق المقاومة للأعلى وكسر الدعم للأسفل، مع تأكيد الإغلاق وإعادة الاختبار.</p></div><div className="market-toggle"><button className={market === "spot" ? "selected" : ""} onClick={() => { setMarket("spot"); setEvent(null); }}>Spot فوري</button><button className={market === "futures" ? "selected" : ""} onClick={() => { setMarket("futures"); setEvent(null); }}>Futures عقود</button></div></section>
     {error && <div className="error-banner"><WifiOff size={16} />{error}</div>}
     <section className="price-panel panel"><div><span className="muted">السعر المباشر · USDT</span><div className="price-line"><strong>{price ? fmt(price) : "—"}</strong><span className={Number(tick?.priceChangePercent || 0) >= 0 ? "positive" : "negative"}>{tick ? (Number(tick.priceChangePercent) >= 0 ? "+" : "") + fmt(Number(tick.priceChangePercent)) + "%" : "—"}</span></div><small className="muted">سعر آخر صفقة · بث مباشر</small></div><div className="stats"><div><span>المقاومة الأقرب</span><b className="res-title">{resistance ? fmt(resistance.price) : "—"}</b></div><div><span>الدعم الأقرب</span><b className="sup-title">{support ? fmt(support.price) : "—"}</b></div><div><span>حجم آخر شمعة / المتوسط</span><b>{!last ? "—" : !averageVolume ? "بيانات غير كافية" : fmt(volumeRatio, 2) + "x"}</b></div></div></section>
     <section className="panel breakout-status"><div className="section-head"><div><h2>حالة الرصد الآن</h2><p className="muted">قراءة مباشرة للسعر مقابل أقرب دعم ومقاومة · تأكيد الكسر بإغلاق شمعة {interval}</p></div><span className={"decision-chip " + monitor.tone}>{monitor.label}</span></div><strong>{monitor.title}</strong><p>{monitor.detail}</p><div className="monitor-next"><b>ماذا أراقب الآن؟</b><span>{monitor.action}</span></div></section>
+    <section className="panel breakout-status">
+      <div className="section-head"><div><h2>ماذا أفعل الآن؟</h2><p className="muted">خطة عملية حسب حالة الاختراق أو الكسر الحالية — وليست أمر تداول آليًا</p></div></div>
+      <div className="alert-state"><b>{actionAdvice.title}</b><span>{actionAdvice.step}</span></div>
+      <div className="alert-state"><b>متى ألغي الفكرة؟</b><span>{actionAdvice.cancel}</span></div>
+      <div className="break-side-grid">
+        <div className="alert-state"><b>حجم شمعة الحدث</b><span>{event ? fmt(event.volumeRatio, 2) + "x من متوسط 20 شمعة" : volumeRatio ? fmt(volumeRatio, 2) + "x من المتوسط" : "غير متاح"} · {volumeStrong ? "نشاط أعلى من المعتاد" : "لا يوجد تأكيد حجمي قوي (المعيار 1.2x)"}</span></div>
+        <div className="alert-state"><b>اتجاه الزخم</b><span>{trend === "up" ? "يميل للصعود: السعر فوق EMA20 وEMA20 أعلى من EMA50" : trend === "down" ? "يميل للهبوط: السعر تحت EMA20 وEMA20 أدنى من EMA50" : "مختلط أو غير مكتمل؛ لا يوجد توافق واضح بين المتوسطات"}</span></div>
+        <div className="alert-state"><b>RSI (14)</b><span>{momentumRsi === null ? "بيانات غير كافية" : fmt(momentumRsi, 1) + (momentumRsi >= 70 ? " · زخم مرتفع وقد يكون ممتدًا" : momentumRsi <= 30 ? " · زخم منخفض وقد يكون ممتدًا" : momentumRsi > 50 ? " · الزخم يميل للمشترين" : " · الزخم يميل للبائعين")}</span></div>
+        <div className="alert-state"><b>سلوك آخر شمعة مكتملة</b><span>{candleRead}</span></div>
+      </div>
+      <p className="muted">ملاحظة: الحجم 1.2x معيار مساعد للرصد وليس شرطًا مضمونًا. لا تُعد إعادة الاختبار ناجحة إلا بعد عودة السعر للمستوى وإغلاقه في جهة الاختراق.</p>
+    </section>
     <section className="panel chart-panel"><div className="section-head"><div><h2>الشارت: الدعم والمقاومة معًا</h2><p className="muted">خط أحمر للمقاومة · خط أخضر للدعم · خط ذهبي للسعر الحالي</p></div><div className="timeframes">{intervals.map(x => <button key={x} className={interval === x ? "selected" : ""} onClick={() => { setInterval(x); setEvent(null); setLastScan(0); }}>{x}</button>)}</div></div><div className="break-chart-wrap"><BreakChart candles={candles} price={price} resistance={resistance?.price || 0} support={support?.price || 0} event={event} /></div><div className="chart-foot"><span>{last ? "آخر شمعة مكتملة: " + new Date(last.time).toLocaleString("ar") : "بانتظار الشموع"}</span><span>المستويات من 5د / 15د / 1س / 4س · الشارت {interval}</span></div></section>
     <section className="break-side-grid"><article className="panel"><div className="section-head"><div><h2 className="res-title">مراقبة اختراق المقاومة ↑</h2><p className="muted">السيناريو الصاعد</p></div></div><b className="break-big res-title">{resistance ? fmt(resistance.price) : "—"}</b><div className="alert-state"><b>شرط التأكيد</b><span>إغلاق شمعة {interval} فوق {resistance ? fmt(resistance.price) : "المقاومة"}، وليس مجرد لمسها.</span></div><div className="alert-state"><b>المسافة الحالية</b><span>{distanceUp === null ? "—" : fmt(distanceUp, 3) + "% فوق السعر"}</span></div><div className="alert-state"><b>قوة المستوى</b><span>{resistance ? resistance.strength + " · توافق " + resistance.timeframes.join(" / ") : "لا تتوفر بيانات كافية"}</span></div></article><article className="panel"><div className="section-head"><div><h2 className="sup-title">مراقبة كسر الدعم ↓</h2><p className="muted">السيناريو الهابط</p></div></div><b className="break-big sup-title">{support ? fmt(support.price) : "—"}</b><div className="alert-state"><b>شرط التأكيد</b><span>إغلاق شمعة {interval} تحت {support ? fmt(support.price) : "الدعم"}، وليس مجرد لمسه.</span></div><div className="alert-state"><b>المسافة الحالية</b><span>{distanceDown === null ? "—" : fmt(distanceDown, 3) + "% تحت السعر"}</span></div><div className="alert-state"><b>قوة المستوى</b><span>{support ? support.strength + " · توافق " + support.timeframes.join(" / ") : "لا تتوفر بيانات كافية"}</span></div></article></section>
     <section className="panel"><div className="section-head"><div><h2>التنبيهات</h2><p className="muted">يتم فحص الشموع المكتملة وتحديث الأسعار تلقائيًا كل 30 ثانية</p></div><button className="refresh" onClick={() => void enableNotifications()}><Bell size={15} />{permission ? "الإشعارات مفعّلة" : "تفعيل الإشعارات"}</button></div><p className="muted">ستظهر رسالة عند رصد إغلاق فوق المقاومة أو تحت الدعم، ثم عند إعادة الاختبار أو فشل الكسر. تعمل إشعارات المتصفح أثناء فتح الصفحة.</p></section>
