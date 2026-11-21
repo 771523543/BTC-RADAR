@@ -79,7 +79,7 @@ export default function BreakoutMonitorPage() {
   }, [market]);
 
   useEffect(() => {
-    if (!last || last.time === lastScan) return;
+    if (!last || !levels.all.length || last.time === lastScan) return;
     setLastScan(last.time);
     const recent = closed.slice(-16);
     const candidates: BreakEvent[] = [];
@@ -87,7 +87,7 @@ export default function BreakoutMonitorPage() {
       const before = recent[i - 1], bar = recent[i];
       const position = closed.length - recent.length + i;
       const prior = closed.slice(Math.max(0, position - 20), position);
-      const priorAverage = prior.reduce((sum, candle) => sum + candle.volume, 0) / Math.max(1, prior.length);
+      const priorAverage = prior.length >= 20 ? prior.reduce((sum, candle) => sum + candle.volume, 0) / 20 : 0;
       const eventVolumeRatio = priorAverage > 0 ? bar.volume / priorAverage : 0;
       for (const level of levels.all) {
         if (level.side === "resistance" && before.close <= level.price && bar.close > level.price)
