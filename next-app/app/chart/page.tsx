@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Bell, RefreshCw, Wifi, WifiOff } from "lucide-react";
-import { atr, binance, calculateLevels, ema, parseCandles, type Candle, type Interval, type Market } from "@/lib/market";
+import { atr, binance, calculateLevels, ema, parseCandles, rsi, type Candle, type Interval, type Market } from "@/lib/market";
 
 const frames:Interval[]=["1m","5m","15m","1h","4h"];
 const fmt=(v:number,d=2)=>Number.isFinite(v)?v.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d}):"—";
@@ -129,6 +129,16 @@ export default function SmartChart(){
  const nearSupport=!!s&&price-s.price<=proximityLimit;
  const decisionTitle=lastBreak?(lastBreak.side==="up"?(lastBreak.retested?"اختراق صاعد مع إعادة اختبار ناجحة":"اختراق صاعد أولي — انتظر إعادة الاختبار"):(lastBreak.retested?"كسر هابط مع إعادة اختبار ناجحة":"كسر هابط أولي — انتظر إعادة الاختبار")):nearResistance?"السعر يقترب من المقاومة — راقب رد الفعل":nearSupport?"السعر يقترب من الدعم — راقب رد الفعل":overallTrend==="up"?"الاتجاه متوافق صعودًا — انتظر فرصة مؤكدة":overallTrend==="down"?"الاتجاه متوافق هبوطًا — انتظر فرصة مؤكدة":"لا توجد أفضلية واضحة — الانتظار";
  const decisionTone=lastBreak?(lastBreak.side==="up"?"good":"bad"):nearResistance||nearSupport?"warn":"neutral";
+ const closedCloses=closed.map(x=>x.close);
+ const currentRsi=rsi(closedCloses);
+ const candleMood=!last?"غير متاح":last.close>last.open?"شمعة صاعدة":last.close<last.open?"شمعة هابطة":"شمعة متعادلة";
+ const candleRange=last?Math.max(last.high-last.low,Number.EPSILON):1;
+ const upperWick=last?last.high-Math.max(last.open,last.close):0;
+ const lowerWick=last?Math.min(last.open,last.close)-last.low:0;
+ const candleRead=!last?"بانتظار شمعة مكتملة":upperWick/candleRange>.45?"ذيل علوي طويل؛ ظهر ضغط بيع عند الأسعار المرتفعة":lowerWick/candleRange>.45?"ذيل سفلي طويل؛ ظهر رفض مبدئي للأسعار المنخفضة":last.close>last.open?"إغلاق أعلى من الافتتاح؛ المشترون أنهوا الشمعة بأفضلية":last.close<last.open?"إغلاق أدنى من الافتتاح؛ البائعون أنهوا الشمعة بأفضلية":"الافتتاح والإغلاق متقاربان؛ لا توجد أفضلية واضحة";
+ const rsiRead=currentRsi===null?"بيانات RSI غير كافية":currentRsi>=70?"RSI "+fmt(currentRsi,1)+"؛ زخم مرتفع وقد يهدأ":currentRsi<=30?"RSI "+fmt(currentRsi,1)+"؛ زخم منخفض وقد يحدث ارتداد":currentRsi>=55?"RSI "+fmt(currentRsi,1)+"؛ الزخم يميل للصعود":currentRsi<=45?"RSI "+fmt(currentRsi,1)+"؛ الزخم يميل للهبوط":"RSI "+fmt(currentRsi,1)+"؛ زخم محايد";
+ const volumeRead=!last||!avgVol?"حجم التداول: بيانات غير كافية":ratio>=1.2?"الحجم أعلى من المتوسط ("+fmt(ratio,2)+"x)؛ يدعم قوة الحركة":ratio<.8?"الحجم أقل من المتوسط ("+fmt(ratio,2)+"x)؛ الحركة ضعيفة نسبيًا":"الحجم قريب من المتوسط ("+fmt(ratio,2)+"x)";
+ const marketRead=overallTrend==="up"&&currentRsi!==null&&currentRsi>=50?"القراءة تميل للصعود؛ اتجاه الساعة و4 ساعات متوافق والزخم ليس سلبيًا":overallTrend==="down"&&currentRsi!==null&&currentRsi<=50?"القراءة تميل للهبوط؛ اتجاه الساعة و4 ساعات متوافق والزخم ليس إيجابيًا":"الصورة مختلطة؛ لا يوجد توافق كافٍ بين الاتجاه والزخم لتفضيل جهة";
  const bullTarget=levels.resistance.find(x=>r&&x.price>r.price);
  const bearTarget=levels.support.find(x=>s&&x.price<s.price);
  const bullStatus=lastBreak?.side==="up"?(lastBreak.retested?"تمت إعادة الاختبار بنجاح؛ راقب الثبات فوق المستوى":"تم الإغلاق فوق المستوى؛ انتظر إعادة الاختبار"):r?"انتظار إغلاق شمعة "+interval+" فوق "+fmt(r.price):"لا يوجد مستوى مقاومة صالح في البيانات";
@@ -142,6 +152,14 @@ export default function SmartChart(){
   <div className="decision-heading"><div><div className="eyebrow">قراءة آلية للسوق · BTCUSDT</div><h2>ماذا يحدث الآن؟</h2></div><span className={"decision-chip "+decisionTone}>{decisionTone==="good"?"إشارة مرصودة":decisionTone==="bad"?"إشارة هبوط":decisionTone==="warn"?"مراقبة":"انتظار"}</span></div>
   <div className={"decision-main "+decisionTone}><strong>{decisionTitle}</strong><p>{lastBreak?"المستوى المرصود "+fmt(lastBreak.level)+" · "+(lastBreak.retested?"إعادة الاختبار مرصودة":"إعادة الاختبار لم تكتمل"):nearResistance?"المقاومة القريبة "+fmt(r!.price):nearSupport?"الدعم القريب "+fmt(s!.price):"لا توجد إشارة اختراق أو كسر مكتملة الآن"}</p></div>
   <div className="trend-grid"><div><span>اتجاه الساعة</span><b>{trendLabel(trend1h)}</b></div><div><span>اتجاه 4 ساعات</span><b>{trendLabel(trend4h)}</b></div><div><span>الخلاصة</span><b>{overallTrend==="up"?"توافق صاعد":overallTrend==="down"?"توافق هابط":"غير متوافق"}</b></div></div>
+  <div className="panel" style={{marginTop:16}}>
+   <div className="section-head"><div><h3>قراءة حركة السوق</h3><p className="muted">تحليل تلقائي للاتجاه والشمعة والزخم والحجم؛ وليس مجرد انتظار كسر المستوى</p></div></div>
+   <div className="alert-state"><b>الخلاصة الحالية</b><span>{marketRead}</span></div>
+   <div className="alert-state"><b>سلوك آخر شمعة مكتملة ({interval})</b><span>{candleMood} · {candleRead}</span></div>
+   <div className="alert-state"><b>مؤشر الزخم RSI</b><span>{rsiRead}</span></div>
+   <div className="alert-state"><b>حجم التداول</b><span>{volumeRead}</span></div>
+   <div className="alert-state"><b>موقع السعر بين المستويات</b><span>{nearResistance?"السعر قريب من المقاومة "+fmt(r!.price)+"؛ راقب الرفض أو الاختراق":nearSupport?"السعر قريب من الدعم "+fmt(s!.price)+"؛ راقب الارتداد أو الكسر":"السعر بين أقرب دعم "+(s?fmt(s.price):"غير متاح")+" ومقاومة "+(r?fmt(r.price):"غير متاحة")}</span></div>
+  </div>
   <div className="scenario-grid">
    <article className="scenario-card bull"><h3>سيناريو الصعود</h3><div className="scenario-line"><span>شرط التأكيد</span><b>{r?"إغلاق "+interval+" فوق "+fmt(r.price):"غير متاح"}</b></div><div className="scenario-line"><span>الهدف التالي</span><b>{bullTarget?fmt(bullTarget.price):"لا يوجد مستوى تالٍ"}</b></div><div className="scenario-line"><span>إلغاء السيناريو</span><b>{r?"إغلاق "+interval+" مجددًا تحت "+fmt(r.price):"غير محدد"}</b></div><p>{bullStatus}</p></article>
    <article className="scenario-card bear"><h3>سيناريو الهبوط</h3><div className="scenario-line"><span>شرط التأكيد</span><b>{s?"إغلاق "+interval+" تحت "+fmt(s.price):"غير متاح"}</b></div><div className="scenario-line"><span>الهدف التالي</span><b>{bearTarget?fmt(bearTarget.price):"لا يوجد مستوى تالٍ"}</b></div><div className="scenario-line"><span>إلغاء السيناريو</span><b>{s?"إغلاق "+interval+" مجددًا فوق "+fmt(s.price):"غير محدد"}</b></div><p>{bearStatus}</p></article>
