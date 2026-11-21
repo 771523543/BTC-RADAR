@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { binance } from "@/lib/market";
 import { RotateCcw, ShoppingCart, TrendingDown } from "lucide-react";
+import ShortRadar from "./ShortRadar";
 
 type Trade={id:number;side:"buy"|"sell";price:number;qty:number;total:number;fee:number;time:string;pnl?:number};
 type Account={cash:number;btc:number;averageEntry:number;realized:number;trades:Trade[]};
@@ -40,43 +41,7 @@ export default function PaperTradingPage(){
   </section>
   <section className="panel paper-history"><div className="section-head"><div><h3>آخر الصفقات</h3><p className="muted">يحفظ الحساب على هذا الجهاز والمتصفح</p></div><button className="clear-btn" onClick={reset}><RotateCcw size={14}/> إعادة ضبط الحساب</button></div>
    {account.trades.length?<div className="paper-table-wrap"><table className="paper-table"><thead><tr><th>العملية</th><th>السعر</th><th>الكمية BTC</th><th>الإجمالي</th><th>الرسوم</th><th>النتيجة</th></tr></thead><tbody>{account.trades.map(t=><tr key={t.id}><td><b className={t.side==="buy"?"positive":"negative"}>{t.side==="buy"?"شراء":"بيع"}</b></td><td>{money(t.price)}</td><td>{money(t.qty,8)}</td><td>{money(t.total)}</td><td>{money(t.fee)}</td><td className={t.pnl===undefined?"":t.pnl>=0?"positive":"negative"}>{t.pnl===undefined?"—":(t.pnl>=0?"+":"")+money(t.pnl)}</td></tr>)}</tbody></table></div>:<div className="paper-empty">لم تنفذ أي صفقة بعد. ابدأ بكمية صغيرة للتدرب.</div>}
-  <section className="panel candle-learning" aria-labelledby="candle-learning-title">
-   <div className="candle-learning-head"><div><span className="eyebrow">دليل تعليمي للمبتدئ</span><h3 id="candle-learning-title">تعلم قراءة الشموع اليابانية</h3><p className="muted">اقرأ سلوك السعر خلال الفترة: من افتتح، وإلى أين وصل، ومن أغلق أقوى؛ المشترون أم البائعون.</p></div><span className="candle-learning-tag">تعلم خطوة بخطوة</span></div>
-   <div className="candle-lesson">
-    <h4>1) افهم أجزاء الشمعة</h4>
-    <div className="candle-parts">
-     <div className="candle-part-visual"><span className="wick"></span><span className="body"></span><span className="wick lower"></span></div>
-     <ul><li><b>الجسم:</b> المسافة بين سعر الافتتاح والإغلاق.</li><li><b>الفتيل العلوي:</b> أعلى سعر وصل إليه السعر خلال الفترة.</li><li><b>الفتيل السفلي:</b> أدنى سعر وصل إليه السعر خلال الفترة.</li><li><b>شمعة صاعدة:</b> الإغلاق أعلى من الافتتاح.</li><li><b>شمعة هابطة:</b> الإغلاق أقل من الافتتاح.</li></ul>
-    </div>
-    <div className="candle-example"><b>مثال افتراضي:</b> إذا افتتح BTC عند 100 ثم أغلق عند 105، فهذا جسم صاعد بمقدار 5. وإذا وصل خلال الفترة إلى 108 ثم هبط إلى 98، فالفتائل تكشف أن السعر رُفض قرب 108 وأن المشترين دافعوا قرب 98.</div>
-   </div>
-   <div className="candle-lesson"><h4>2) اقرأ المعنى، وليس اللون فقط</h4>
-    <div className="candle-meaning-grid">
-     <div><b>جسم كبير صاعد</b><span>ضغط شراء قوي خلال تلك الفترة.</span></div><div><b>جسم كبير هابط</b><span>ضغط بيع قوي.</span></div>
-     <div><b>فتيل علوي طويل</b><span>السعر حاول الصعود ثم واجه بيعًا أو جني أرباح.</span></div><div><b>فتيل سفلي طويل</b><span>السعر هبط ثم ظهر طلب ودفعه للأعلى.</span></div>
-     <div><b>جسم صغير</b><span>تردد؛ لا يعني انعكاسًا وحده.</span></div>
-    </div>
-   </div>
-   <div className="candle-lesson"><h4>3) نماذج مهمة للمبتدئ</h4>
-    <div className="candle-pattern-list">
-     <div><b>الدوجي</b><span>جسم صغير جدًا؛ توازن مؤقت بين المشترين والبائعين.</span></div>
-     <div><b>المطرقة</b><span>جسم صغير وفتيل سفلي طويل بعد هبوط؛ قد يشير إلى رفض الأسعار المنخفضة، ويحتاج تأكيدًا.</span></div>
-     <div><b>الشهاب</b><span>جسم صغير وفتيل علوي طويل بعد صعود؛ قد يشير إلى رفض الأسعار المرتفعة، ويحتاج تأكيدًا.</span></div>
-     <div><b>الابتلاع الصاعد/الهابط</b><span>شمعة كبيرة تغطي جسم الشمعة السابقة؛ تكون دلالتها أقوى قرب دعم أو مقاومة ومع حجم تداول ملحوظ.</span></div>
-    </div>
-   </div>
-   <div className="candle-lesson"><h4>4) ترتيب عملي لقراءة الشارت</h4>
-    <ol className="candle-steps">
-     <li>ابدأ بإطار زمني أكبر مثل 4 ساعات أو يومي لمعرفة الاتجاه العام.</li>
-     <li>حدد مناطق الدعم: مناطق ظهر فيها طلب سابقًا.</li>
-     <li>حدد مناطق المقاومة: مناطق ظهر فيها عرض أو بيع سابقًا.</li>
-     <li>انتقل لإطار أصغر لرؤية الشموع عند هذه المناطق.</li>
-     <li>انتظر إغلاق الشمعة والتأكيد بدل اتخاذ قرار أثناء تكوّنها.</li>
-     <li>راقب حجم التداول: الحركة المدعومة بحجم أعلى تكون عادةً أكثر أهمية من حركة ضعيفة الحجم.</li>
-    </ol>
-   </div>
-   <p className="candle-learning-note">ملاحظة: نماذج الشموع احتمالات وليست ضمانًا لاتجاه السعر. اربط قراءتها بالاتجاه ومناطق الدعم والمقاومة وحجم التداول، وانتظر إغلاق الشمعة للتأكيد.</p>
-  </section>
-  </section><footer><span>BTC RADAR · لوحة واحدة</span><span>بيانات السوق من Binance</span><span>التداول التجريبي فقط</span></footer>
+  <ShortRadar />
+    </section><footer><span>BTC RADAR · لوحة واحدة</span><span>بيانات السوق من Binance</span><span>التداول التجريبي فقط</span></footer>
  </main>;
 }
