@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { binance } from "@/lib/market";
 import Link from "next/link";
 import { RotateCcw, ShoppingCart, TrendingDown } from "lucide-react";
 
@@ -12,11 +13,12 @@ const blank=():Account=>({cash:START,btc:0,averageEntry:0,realized:0,trades:[]})
 export default function PaperTradingPage(){
  const [price,setPrice]=useState(0),[change,setChange]=useState(0),[connected,setConnected]=useState(false);
  const [account,setAccount]=useState<Account>(blank),[ready,setReady]=useState(false),[mode,setMode]=useState<"buy"|"sell">("buy"),[amount,setAmount]=useState("100"),[notice,setNotice]=useState("");
- useEffect(()=>{try{const saved=localStorage.getItem("btc-radar-paper-account-v1");if(saved){const p=JSON.parse(saved) as Account;if(Number.isFinite(p.cash)&&Number.isFinite(p.btc)&&Array.isArray(p.trades))setAccount(p);}}catch{}setReady(true);},[]);
+ const orderLock=useRef(false);
+ useEffect(()=>{try{const saved=localStorage.getItem("btc-radar-paper-account-v1");if(saved){const p=JSON.parse(saved) as Account;if(Number.isFinite(p.cash)&&p.cash>=0&&Number.isFinite(p.btc)&&p.btc>=0&&Number.isFinite(p.averageEntry)&&p.averageEntry>=0&&Number.isFinite(p.realized)&&Array.isArray(p.trades))setAccount({...blank(),...p,trades:p.trades.filter((t:Trade)=>t&&Number.isFinite(t.price)&&Number.isFinite(t.qty)&&Number.isFinite(t.total)).slice(0,100)});}}catch{}setReady(true);},[]);
  useEffect(()=>{if(ready)try{localStorage.setItem("btc-radar-paper-account-v1",JSON.stringify(account));}catch{}},[account,ready]);
  useEffect(()=>{
   let stopped=false,socket:WebSocket|undefined,retry:ReturnType<typeof setTimeout>|undefined;
-  const load=async()=>{try{const r=await fetch("https://api.binance.com/api/v3/ticker/24hr?symbol=BTCUSDT",{cache:"no-store"});if(!r.ok)throw Error();const d=await r.json();if(!stopped){setPrice(Number(d.lastPrice));setChange(Number(d.priceChangePercent));setConnected(true);}}catch{if(!stopped&&!socket)setConnected(false);}};
+  const load=async()=>{try{const d=await binance<{lastPrice:string;priceChangePercent:string}>("spot","/api/v3/ticker/24hr?symbol=BTCUSDT");if(!stopped){setPrice(Number(d.lastPrice));setChange(Number(d.priceChangePercent));setConnected(true);}}catch{if(!stopped&&!socket)setConnected(false);}};
   void load();const timer=setInterval(load,15000);
   const connect=()=>{if(stopped)return;try{socket=new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@ticker");socket.onopen=()=>{if(!stopped)setConnected(true);};socket.onmessage=e=>{try{const d=JSON.parse(e.data);if(!stopped){setPrice(Number(d.c));setChange(Number(d.P));setConnected(true);}}catch{}};socket.onclose=()=>{if(!stopped){setConnected(false);retry=setTimeout(connect,4000);}};socket.onerror=()=>{if(!stopped)setConnected(false);};}catch{if(!stopped)setConnected(false);}};
   connect();return()=>{stopped=true;clearInterval(timer);if(retry)clearTimeout(retry);socket?.close();};
@@ -24,25 +26,26 @@ export default function PaperTradingPage(){
  const equity=account.cash+account.btc*price,positionValue=account.btc*price;
  const unrealized=account.btc>0&&price>0?(price-account.averageEntry)*account.btc:0,totalPnl=account.realized+unrealized;
  const execute=()=>{
+  if(orderLock.current)return;orderLock.current=true;
   setNotice("");const value=Number(amount);
-  if(!price||!Number.isFinite(value)||value<=0){setNotice("أدخل كمية صحيحة وانتظر تحميل السعر المباشر.");return;}
+  if(!price||!Number.isFinite(value)||value<=0){setNotice("أدخل كمية صحيحة وانتظر تحميل السعر المباشر.");orderLock.current=false;return;}
   if(mode==="buy"){
-   const fee=value*FEE;if(value+fee>account.cash){setNotice("رصيدك التجريبي لا يكفي لهذه العملية مع الرسوم.");return;}
+   const fee=value*FEE;if(value+fee>account.cash){setNotice("رصيدك التجريبي لا يكفي لهذه العملية مع الرسوم.");orderLock.current=false;return;}
    const qty=value/price,nextQty=account.btc+qty,nextAverage=(account.btc*account.averageEntry+value+fee)/nextQty;
    const trade:Trade={id:Date.now(),side:"buy",price,qty,total:value,fee,time:new Date().toLocaleString("ar")};
    setAccount(old=>({...old,cash:old.cash-value-fee,btc:nextQty,averageEntry:nextAverage,trades:[trade,...old.trades].slice(0,100)}));
-   setNotice("تم الشراء التجريبي. لم يتم إرسال أي أمر إلى Binance.");
+   setNotice("تم الشراء التجريبي. لم يتم إرسال أي أمر إلى Binance.");orderLock.current=false;
   }else{
-   const qty=value;if(qty>account.btc+1e-12){setNotice("لا تملك هذه الكمية من BTC في محفظتك التجريبية.");return;}
+   const qty=value;if(qty>account.btc+1e-12){setNotice("لا تملك هذه الكمية من BTC في محفظتك التجريبية.");orderLock.current=false;return;}
    const total=qty*price,fee=total*FEE,proceeds=total-fee,pnl=proceeds-qty*account.averageEntry,remaining=Math.max(0,account.btc-qty);
    const trade:Trade={id:Date.now(),side:"sell",price,qty,total,fee,pnl,time:new Date().toLocaleString("ar")};
    setAccount(old=>({...old,cash:old.cash+proceeds,btc:remaining,averageEntry:remaining<1e-12?0:old.averageEntry,realized:old.realized+pnl,trades:[trade,...old.trades].slice(0,100)}));
-   setNotice("تم البيع التجريبي. نتيجة هذه العملية: "+money(pnl)+" USDT.");
+   setNotice("تم البيع التجريبي. نتيجة هذه العملية: "+money(pnl)+" USDT.");orderLock.current=false;
   }
  };
  const reset=()=>{if(window.confirm("هل تريد تصفير الحساب التجريبي وإلغاء سجل العمليات؟")){setAccount(blank());setAmount("100");setNotice("تمت إعادة الحساب إلى 10,000 USDT افتراضية.");}};
  return <main className="shell paper-shell">
-  <header className="topbar"><Link className="brand" href="/BTC-RADAR/"><span className="brand-icon">₿</span><span><b>BTC RADAR</b><small>التداول التجريبي</small></span></Link><nav className="smart-nav"><Link href="/BTC-RADAR/">لوحة التحليل</Link><Link href="/BTC-RADAR/breakout/">رادار الكسر</Link><Link className="active" href="/BTC-RADAR/paper-trading/">التداول التجريبي</Link></nav><div className={"connection "+(connected?"online":"offline")}><i/>{connected?"السعر مباشر":"بانتظار السعر"}</div></header>
+  <header className="topbar"><Link className="brand" href="/"><span className="brand-icon">₿</span><span><b>BTC RADAR</b><small>التداول التجريبي</small></span></Link><nav className="smart-nav"><Link href="/BTC-RADAR/">لوحة التحليل</Link><Link href="/breakout/">رادار الكسر</Link><Link className="active" href="/paper-trading/">التداول التجريبي</Link></nav><div className={"connection "+(connected?"online":"offline")}><i/>{connected?"السعر مباشر":"بانتظار السعر"}</div></header>
   <section className="hero"><div><div className="eyebrow">محاكاة تعليمية · بدون أموال حقيقية</div><h1>التداول التجريبي <span>BTCUSDT</span></h1><p>تدرّب على الشراء والبيع، وتابع كيف يتغير رصيدك وقيمة محفظتك مع حركة سعر البيتكوين.</p></div></section>
   <section className="panel paper-price"><div><span className="muted">سعر BTC الحالي · USDT</span><strong>{price?money(price):"جاري تحميل السعر..."}</strong><small className={change>=0?"positive":"negative"}>{price?(change>=0?"+":"")+money(change)+"% خلال 24 ساعة":"—"}</small></div><div className="paper-price-side"><span className="muted">السعر يتحدث تلقائيًا</span><b className={change>=0?"positive":"negative"}>{change>=0?"▲":"▼"} {money(Math.abs(change))}%</b></div></section>
   <section className="paper-account-grid">
