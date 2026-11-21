@@ -105,3 +105,37 @@ footer{color:var(--muted)}
 .monitor-next{display:flex;flex-direction:column;gap:5px;margin-top:13px;padding:12px 14px;border-radius:10px;background:#f1f6fb;border:1px solid #dce5ef;line-height:1.8}
 .monitor-next b{font-size:12px;color:#344256}
 .monitor-next span{font-size:13px;color:#46566b}
+
+/* Paper trading simulator */
+.paper-price{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:18px}
+.paper-price strong{display:block;font-size:35px;direction:ltr;text-align:right;margin:7px 0}
+.paper-price small{display:block;font-size:11px}
+.paper-price-side{text-align:left;display:grid;gap:6px}.paper-price-side b{font-size:18px}
+.paper-account-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:12px;margin-bottom:18px}
+.paper-balance,.paper-stat{display:flex;flex-direction:column;gap:9px;min-width:0}
+.paper-balance>strong,.paper-stat>strong{font-size:23px;direction:ltr;text-align:right;overflow-wrap:anywhere}
+.paper-balance>strong small,.paper-stat>strong small{font-size:12px;color:var(--muted)}
+.paper-pnl{font-size:12px;font-weight:700}
+.paper-balance-foot{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px;padding-top:10px;border-top:1px solid var(--line)}
+.paper-balance-foot span{display:grid;gap:4px;color:var(--muted);font-size:10px}.paper-balance-foot b{color:var(--text);font-size:12px;direction:ltr}
+.paper-trade-panel{margin-bottom:18px}.paper-demo-tag{padding:6px 11px;border-radius:20px;background:#e9f8f1;color:#087a56;font-size:11px;font-weight:700}
+.paper-tabs{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:14px 0 18px}
+.paper-tabs button{display:flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:12px;background:#f7f9fc;color:var(--text);font:inherit;font-weight:700;cursor:pointer}
+.paper-tabs button.buy-active{background:#e9f8f1;border-color:#9bd7bf;color:#087a56}.paper-tabs button.sell-active{background:#fff0f2;border-color:#efb7bf;color:#bd3548}
+.paper-label{display:block;font-size:12px;color:var(--muted);margin-bottom:8px}
+.paper-input-row{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:4px 12px;background:#fff}
+.paper-input-row input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--text);font:inherit;font-size:20px;padding:9px 0;direction:ltr}.paper-input-row span{color:var(--muted);font-size:12px}
+.paper-quick{display:flex;flex-wrap:wrap;gap:7px;margin:10px 0}
+.paper-quick button{border:1px solid var(--line);border-radius:7px;background:#f7f9fc;color:var(--text);padding:7px 11px;font:inherit;font-size:11px;cursor:pointer}
+.paper-estimate{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px 0;color:var(--muted);font-size:11px}
+.paper-estimate span{display:grid;gap:5px}.paper-estimate b{color:var(--text);direction:ltr;text-align:right}
+.paper-submit{width:100%;border:0;border-radius:10px;padding:13px;color:#fff;font:inherit;font-weight:700;cursor:pointer}
+.paper-submit:disabled{opacity:.5;cursor:not-allowed}.paper-submit.buy{background:#12845f}.paper-submit.sell{background:#d94b5b}
+.paper-notice{padding:10px 12px;border-radius:9px;background:#eef5ff;color:#24558c;font-size:12px;line-height:1.7}
+.paper-disclaimer{font-size:10px;line-height:1.8;color:var(--muted);margin:12px 0 0}
+.paper-table-wrap{overflow-x:auto}.paper-table{width:100%;border-collapse:collapse;white-space:nowrap;font-size:11px}
+.paper-table th,.paper-table td{padding:11px 9px;border-bottom:1px solid var(--line);text-align:right}
+.paper-table th{color:var(--muted);font-weight:600;background:#f7f9fc}
+.paper-empty{text-align:center;padding:28px 12px;color:var(--muted);font-size:12px;line-height:1.8}
+@media(max-width:900px){.paper-account-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){.paper-price{align-items:flex-start;flex-direction:column}.paper-price strong{font-size:29px}.paper-price-side{text-align:right}.paper-estimate{grid-template-columns:1fr 1fr}.paper-account-grid{grid-template-columns:1fr 1fr}.paper-balance{grid-column:1/-1}.paper-balance>strong,.paper-stat>strong{font-size:20px}}
