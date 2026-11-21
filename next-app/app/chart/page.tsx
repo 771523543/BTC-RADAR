@@ -33,7 +33,7 @@ export default function SmartChart(){
  useEffect(()=>{if("Notification"in window)setPermission(Notification.permission==="granted");},[]);
  useEffect(()=>{if("Notification"in window)setPermission(Notification.permission==="granted");},[]);
  const price=Number(ticker?.lastPrice||0),levels=useMemo(()=>calculateLevels(m5,m15,h1,h4,price),[m5,m15,h1,h4,price]);
- const closed=candles.filter(c=>c.closeTime<Date.now()),last=closed.at(-1),previous=closed.at(-2),avgVol=closed.slice(-21,-1).reduce((s,c)=>s+c.volume,0)/Math.max(1,Math.min(20,closed.length-1)),ratio=last&&avgVol?last.volume/avgVol:0;
+ const closed=candles.filter(c=>c.closeTime<Date.now()),last=closed.at(-1),previous=closed.at(-2),avgVol=closed.length>=21?closed.slice(-21,-1).reduce((s,c)=>s+c.volume,0)/20:0,ratio=last&&avgVol?last.volume/avgVol:0;
  const addEvent=useCallback((title:string,detail:string,tone:EventItem["tone"])=>{setEvents(old=>[{id:++eventId.current,time:new Date().toLocaleTimeString("ar"),title,detail,tone},...old].slice(0,35));if(permission&&"Notification"in window&&Notification.permission==="granted")new Notification("BTC RADAR · "+title,{body:detail});},[permission]);
  const refresh=useCallback(async()=>{setBusy(true);try{const root=market==="futures"?"/fapi/v1":"/api/v3";const [t,c,c5,c15,a,b]=await Promise.all([binance<Ticker>(market,root+"/ticker/24hr?symbol=BTCUSDT"),binance<unknown[][]>(market,root+"/klines?symbol=BTCUSDT&interval="+interval+"&limit=300"),binance<unknown[][]>(market,root+"/klines?symbol=BTCUSDT&interval=5m&limit=300"),binance<unknown[][]>(market,root+"/klines?symbol=BTCUSDT&interval=15m&limit=300"),binance<unknown[][]>(market,root+"/klines?symbol=BTCUSDT&interval=1h&limit=240"),binance<unknown[][]>(market,root+"/klines?symbol=BTCUSDT&interval=4h&limit=240")]);setTicker(t);setCandles(parseCandles(c));setM5(parseCandles(c5));setM15(parseCandles(c15));setH1(parseCandles(a));setH4(parseCandles(b));setConnected(true);setError("");if(market==="futures"){
  const results=await Promise.allSettled([
@@ -65,9 +65,12 @@ export default function SmartChart(){
   const expired=!!lastBreak&&!lastBreak.retested&&last.time-lastBreak.time>intervalMs[interval]*8;
   if(expired){addEvent("انتهت متابعة إعادة الاختبار","لم تعد الشموع إلى مستوى الاختراق خلال 8 شموع؛ ستبدأ مراقبة فرص جديدة","warn");setLastBreak(null);}
   const volumeRatio=avgVol?last.volume/avgVol:0;
-  setVolumeStatus((volumeRatio>=1.2?"حجم مرتفع":volumeRatio<.8?"حجم منخفض":"حجم قريب من المتوسط")+" · "+fmt(volumeRatio,2)+"x من متوسط 20 شمعة");
-  if(volumeRatio>=1.2)addEvent("ارتفاع حجم التداول","الحجم "+fmt(volumeRatio,2)+"x من متوسط آخر 20 شمعة مكتملة","good");
-  else if(volumeRatio<.8)addEvent("انخفاض حجم التداول","الحجم "+fmt(volumeRatio,2)+"x من متوسط آخر 20 شمعة مكتملة","warn");
+  if(!avgVol)setVolumeStatus("بيانات حجم غير كافية · نحتاج 20 شمعة سابقة");
+  else {
+   setVolumeStatus((volumeRatio>=1.2?"حجم مرتفع":volumeRatio<.8?"حجم منخفض":"حجم قريب من المتوسط")+" · "+fmt(volumeRatio,2)+"x من متوسط 20 شمعة");
+   if(volumeRatio>=1.2)addEvent("ارتفاع حجم التداول","الحجم "+fmt(volumeRatio,2)+"x من متوسط آخر 20 شمعة مكتملة","good");
+   else if(volumeRatio<.8)addEvent("انخفاض حجم التداول","الحجم "+fmt(volumeRatio,2)+"x من متوسط آخر 20 شمعة مكتملة","warn");
+  }
   // Scan the latest eight completed candles, not only the newest one.
   // This also restores an active breakout when the page is opened after it happened.
   if(!lastBreak||lastBreak.retested||expired){
@@ -94,7 +97,7 @@ export default function SmartChart(){
      const candidateBar=recent[candidate.index];
      const candidatePosition=closed.length-recent.length+candidate.index;
      const priorVolumes=closed.slice(Math.max(0,candidatePosition-20),candidatePosition);
-     const candidateAverage=priorVolumes.reduce((sum,bar)=>sum+bar.volume,0)/Math.max(1,priorVolumes.length);
+     const candidateAverage=priorVolumes.length>=20?priorVolumes.reduce((sum,bar)=>sum+bar.volume,0)/20:0;
      const candidateVolumeRatio=candidateAverage>0?candidateBar.volume/candidateAverage:0;
      const detail=(barsAgo===0?"أغلقت آخر شمعة":"حدث قبل "+barsAgo+" شمعة مكتملة")+
       (candidate.side==="up"?" فوق المقاومة ":" تحت الدعم ")+fmt(candidate.level)+
