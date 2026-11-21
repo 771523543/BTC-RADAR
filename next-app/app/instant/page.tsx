@@ -45,7 +45,7 @@ function pattern(c:C[],price:number):Pattern{
  const detail=found.individual?(status==="confirmed"?"أغلقت الشمعة التالية في جهة التأكيد المطلوبة": "ينتظر إغلاق الشمعة التالية "+(direction==="bull"?"فوق ":direction==="bear"?"تحت ":"فوق أو تحت ")+fmt(level)):(status==="confirmed"?"السعر ما زال في جهة التأكيد من منتصف شمعة النموذج":"كسر السعر منتصف شمعة النموذج؛ فشل النموذج");
  return {...found,kind:direction,confirmation:level,status,detail};
 }
-type Plan={side:Side;confidence:number;reason:string;entry:number;sl:number;tp1:number;tp2:number;atr:number;pattern:string;patternType:string;confirmation:number;confirmationStatus:string;confirmationDetail:string;volumeText:string;sweepText:string;fundingText:string;oiText:string;rsi:number;ema20:number;ema50:number;support:number|null;resistance:number|null;supportDistance:number|null;resistanceDistance:number|null;priceLocation:string;levelWarning:string;
+type Plan={side:Side;confidence:number;reason:string;entry:number;sl:number;tp1:number;tp2:number;atr:number;pattern:string;patternType:string;confirmation:number;confirmationStatus:string;confirmationDetail:string;volumeText:string;sweepText:string;fundingText:string;oiText:string;rsi:number;ema20:number;ema50:number;support:number|null;resistance:number|null;supportDistance:number|null;resistanceDistance:number|null;priceLocation:string;levelWarning:string};
 function analyze(s:Data):Plan{
 const c=s.candles,last=c[c.length-1],closes=c.map(x=>x.close),a=atr(c),e20=ema(closes,20),e50=ema(closes,50),rv=rsi(closes),pat=pattern(c,s.price);
 const volAvg=avg(c.slice(-21,-1).map(x=>x.volume)),volRatio=volAvg?last.volume/volAvg:0;
