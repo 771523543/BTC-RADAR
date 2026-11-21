@@ -151,3 +151,13 @@ footer{color:var(--muted)}
 .paper-table td{color:var(--text)}
 .paper-demo-tag{white-space:nowrap}
 @media(max-width:420px){.paper-account-grid{grid-template-columns:1fr}.paper-balance{grid-column:auto}.paper-estimate{grid-template-columns:1fr}.paper-price strong{font-size:25px}.paper-table{font-size:10px}}
+
+
+/* Unified single-page dashboard */
+.paper-main-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 18px;padding:6px;background:#edf2f8;border:1px solid var(--line);border-radius:13px}
+.paper-main-tabs button{border:0;border-radius:9px;padding:12px 8px;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:800;cursor:pointer}
+.paper-main-tabs button.active{background:#fff;color:#174f91;box-shadow:0 1px 5px #16243a18}
+.paper-embedded>.shell{max-width:none;width:100%;padding:0;margin:0;background:transparent}
+.paper-embedded>.shell>.topbar,.paper-embedded>.shell>footer{display:none}
+.paper-embedded .hero{margin-top:0}
+@media(max-width:520px){.paper-main-tabs{gap:4px;padding:4px}.paper-main-tabs button{font-size:11px;padding:11px 3px}}
