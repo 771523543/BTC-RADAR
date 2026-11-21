@@ -19,7 +19,7 @@ function pattern(c:C[],price:number):Pattern{
  const n=c.length, x=c[n-1], p=c[n-2], q=c[n-3], r=c[n-4];
  const body=(z:C)=>Math.abs(z.close-z.open), range=(z:C)=>Math.max(z.high-z.low,1e-9), upper=(z:C)=>z.high-Math.max(z.open,z.close), lower=(z:C)=>Math.min(z.open,z.close)-z.low;
  const bull=(z:C)=>z.close>z.open, bear=(z:C)=>z.close<z.open;
- let found:{name:string;kind:"bull"|"bear";score:number;type:string;signal:C;individual:boolean}|null=null;
+ let found:{name:string;kind:"bull"|"bear"|"neutral";score:number;type:string;signal:C;individual:boolean}|null=null;
  // Individual patterns are tested on the penultimate candle so the following candle is available for confirmation.
  const one=p, ob=body(one), or=range(one), ou=upper(one), ol=lower(one);
  const priorDown=q.close<r.close,priorUp=q.close>r.close;
@@ -40,9 +40,10 @@ function pattern(c:C[],price:number):Pattern{
  if(!found&&bear(r)&&bull(q)&&bull(p)&&bull(x)&&q.high<r.high&&p.high<r.high&&x.high<r.high&&x.close<r.close)found={name:"Falling Three Methods",kind:"bear",score:2,type:"استمراري",signal:x,individual:false};
  if(!found)return empty;
  const level=(found.signal.high+found.signal.low)/2;
- const status=found.individual?(found.kind==="bull"?(x.close>level?"confirmed":"pending"):(x.close<level?"confirmed":"pending")):(found.kind==="bull"?(price>level?"confirmed":"failed"):(price<level?"confirmed":"failed"));
- const detail=found.individual?(status==="confirmed"?"أغلقت الشمعة التالية في جهة التأكيد المطلوبة": "ينتظر إغلاق الشمعة التالية "+(found.kind==="bull"?"فوق ":"تحت ")+fmt(level)):(status==="confirmed"?"السعر ما زال في جهة التأكيد من منتصف شمعة النموذج":"كسر السعر منتصف شمعة النموذج؛ فشل النموذج");
- return {...found,confirmation:level,status,detail};
+ const direction=found.kind==="neutral"?(x.close>level?"bull":x.close<level?"bear":"neutral"):found.kind;
+ const status=found.individual?(direction==="bull"?(x.close>level?"confirmed":"pending"):direction==="bear"?(x.close<level?"confirmed":"pending"):"pending"):(direction==="bull"?(price>level?"confirmed":"failed"):direction==="bear"?(price<level?"confirmed":"failed"):"pending");
+ const detail=found.individual?(status==="confirmed"?"أغلقت الشمعة التالية في جهة التأكيد المطلوبة": "ينتظر إغلاق الشمعة التالية "+(direction==="bull"?"فوق ":direction==="bear"?"تحت ":"فوق أو تحت ")+fmt(level)):(status==="confirmed"?"السعر ما زال في جهة التأكيد من منتصف شمعة النموذج":"كسر السعر منتصف شمعة النموذج؛ فشل النموذج");
+ return {...found,kind:direction,confirmation:level,status,detail};
 }
 type Plan={side:Side;confidence:number;reason:string;entry:number;sl:number;tp1:number;tp2:number;atr:number;pattern:string;patternType:string;confirmation:number;confirmationStatus:string;confirmationDetail:string;volumeText:string;sweepText:string;fundingText:string;oiText:string;rsi:number;ema20:number;ema50:number;support:number|null;resistance:number|null};
 function analyze(s:Data):Plan{
