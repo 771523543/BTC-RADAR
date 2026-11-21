@@ -50,7 +50,7 @@ function analyze(s:Data):Plan{
 const c=s.candles,last=c[c.length-1],closes=c.map(x=>x.close),a=atr(c),e20=ema(closes,20),e50=ema(closes,50),rv=rsi(closes),pat=pattern(c,s.price);
 const volAvg=avg(c.slice(-21,-1).map(x=>x.volume)),volRatio=volAvg?last.volume/volAvg:0;
 const lows=c.slice(-80,-2).map(x=>x.low).filter(x=>x<s.price).sort((x,y)=>y-x),highs=c.slice(-80,-2).map(x=>x.high).filter(x=>x>s.price).sort((x,y)=>x-y),support=lows[0]??null,resistance=highs[0]??null;
-const oldLow=Math.min(...c.slice(-22,-2).map(x=>x.low)),oldHigh=Math.max(...c.slice(-22,-2).map(x=>x.high)),sweepLow=last.low<oldLow&&last.close>oldLow,sweepHigh=last.high>oldHigh&&last.close<oldHigh;
+const priorWindow=c.slice(-21,-1),oldLow=Math.min(...priorWindow.map(x=>x.low)),oldHigh=Math.max(...priorWindow.map(x=>x.high)),sweepLow=last.low<oldLow&&last.close>oldLow,sweepHigh=last.high>oldHigh&&last.close<oldHigh;
 const up=s.price>e20&&e20>e50,down=s.price<e20&&e20<e50,vol=volRatio>=1.15,fundBull=s.funding<-.00005,fundBear=s.funding>.00005;
 let bull=0,bear=0;if(pat.kind==="bull")bull+=pat.score;if(pat.kind==="bear")bear+=pat.score;if(up)bull+=2;if(down)bear+=2;if(rv>=50&&rv<=68)bull+=1;if(rv<=50&&rv>=32)bear+=1;if(sweepLow)bull+=1.5;if(sweepHigh)bear+=1.5;if(vol&&last.close>last.open)bull+=1;if(vol&&last.close<last.open)bear+=1;if(fundBull)bull+=.5;if(fundBear)bear+=.5;
 const dead=a/s.price*100<.12;const confirmationBlocks=pat.status==="pending"||pat.status==="failed";const side:Side=dead||confirmationBlocks||Math.max(bull,bear)<3.5||Math.abs(bull-bear)<1.5?"NO TRADE":bull>bear?"LONG":"SHORT";
