@@ -297,3 +297,26 @@ footer{color:var(--muted)}
  .candle-lesson{padding:13px 0}
  .candle-lesson h4{font-size:15px}
 }
+
+/* Live short radar */
+.short-radar{margin:16px 0;padding:18px;background:#fff!important;border:1px solid #dce4ef}
+.short-radar-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.short-radar-head h3{margin:5px 0;font-size:21px;color:#172338}
+.short-radar-head p{font-size:12px;line-height:1.7;margin:5px 0}
+.short-live-dot{font-size:11px;color:#087a56;background:#e9f8f1;border:1px solid #b9e5d1;border-radius:30px;padding:6px 10px;white-space:nowrap}
+.short-price-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:15px 0}
+.short-price-strip>div,.short-level-grid>div{display:flex;flex-direction:column;gap:6px;padding:12px;background:#f5f7fb;border:1px solid #e1e7ef;border-radius:10px;min-width:0}
+.short-price-strip small,.short-level-grid small,.short-status small{font-size:11px;color:#718096}
+.short-price-strip b,.short-level-grid b{font-size:14px;color:#172338;overflow-wrap:anywhere}
+.short-status{padding:15px;border-radius:12px;background:#f2f6fc;border:1px solid #dce7f3}
+.short-status h4{font-size:17px;color:#244b77;margin:7px 0}
+.short-status p{font-size:13px;line-height:1.9;color:#526174;margin:0}
+.short-level-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:12px 0}
+.short-plan,.short-rules{padding:14px;border:1px solid #e1e7ef;border-radius:11px;margin-top:11px;background:#fff}
+.short-plan h4{margin:0 0 10px;color:#24354d}
+.short-plan p,.short-rules li{font-size:12px;line-height:1.9;color:#526174;margin:6px 0}
+.short-plan b,.short-rules b{color:#24354d}
+.short-rules ol{padding-right:20px;margin:8px 0 0}
+.short-footnote{font-size:11px;line-height:1.9;color:#78869a;margin:12px 0 0}
+.short-error{color:#a33;font-size:12px}
+@media(max-width:520px){.short-radar{padding:13px}.short-radar-head h3{font-size:19px}.short-price-strip,.short-level-grid{gap:6px}.short-price-strip>div,.short-level-grid>div{padding:9px 7px}.short-price-strip b,.short-level-grid b{font-size:12px}.short-price-strip small,.short-level-grid small{font-size:10px}}
