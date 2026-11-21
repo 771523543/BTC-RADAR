@@ -13,7 +13,7 @@ type BreakState={side:"up"|"down";level:number;time:number;retested:boolean};
 
 function Chart({candles,price,levels}:{candles:Candle[];price:number;levels:ReturnType<typeof calculateLevels>}){
  const bars=candles.slice(-120);if(!bars.length)return <div className="chart-empty">بانتظار الشموع...</div>;
- const visibleResistance=levels.resistance.slice(0,4),visibleSupport=levels.support.slice(0,4);
+ const visibleResistance=levels.resistance.slice(0,5),visibleSupport=levels.support.slice(0,5);
  const plottedLevels=[...visibleResistance,...visibleSupport];
  const values=[...bars.flatMap(x=>[x.low,x.high]),price,...plottedLevels.map(x=>x.price)].filter(v=>Number.isFinite(v)&&v>0);
  const rawLow=Math.min(...values),rawHigh=Math.max(...values),padding=Math.max((rawHigh-rawLow)*.06,price*.00015);
