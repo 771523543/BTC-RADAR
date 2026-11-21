@@ -90,7 +90,9 @@ export default function SmartChart(){
      setLastBreak({side:candidate.side,level:candidate.level,time:candidate.time,retested});
      const barsAgo=recent.length-1-candidate.index;
      const candidateBar=recent[candidate.index];
-     const candidateAverage=recent.slice(Math.max(0,candidate.index-20),candidate.index).reduce((sum,bar)=>sum+bar.volume,0)/Math.max(1,Math.min(20,candidate.index));
+     const candidatePosition=closed.length-recent.length+candidate.index;
+     const priorVolumes=closed.slice(Math.max(0,candidatePosition-20),candidatePosition);
+     const candidateAverage=priorVolumes.reduce((sum,bar)=>sum+bar.volume,0)/Math.max(1,priorVolumes.length);
      const candidateVolumeRatio=candidateAverage>0?candidateBar.volume/candidateAverage:0;
      const detail=(barsAgo===0?"أغلقت آخر شمعة":"حدث قبل "+barsAgo+" شمعة مكتملة")+
       (candidate.side==="up"?" فوق المقاومة ":" تحت الدعم ")+fmt(candidate.level)+
