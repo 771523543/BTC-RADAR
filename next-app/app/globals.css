@@ -139,3 +139,15 @@ footer{color:var(--muted)}
 .paper-empty{text-align:center;padding:28px 12px;color:var(--muted);font-size:12px;line-height:1.8}
 @media(max-width:900px){.paper-account-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:760px){.paper-price{align-items:flex-start;flex-direction:column}.paper-price strong{font-size:29px}.paper-price-side{text-align:right}.paper-estimate{grid-template-columns:1fr 1fr}.paper-account-grid{grid-template-columns:1fr 1fr}.paper-balance{grid-column:1/-1}.paper-balance>strong,.paper-stat>strong{font-size:20px}}
+
+/* Paper simulator polish */
+.paper-price,.paper-balance,.paper-stat,.paper-trade-panel,.paper-history{color:var(--text)}
+.paper-input-row{background:#fff;border-color:var(--line)}
+.paper-input-row input{color:var(--text)}
+.paper-quick button{background:#f7f9fc;color:var(--text);border-color:var(--line)}
+.paper-notice{background:#eef5ff;color:#24558c;border:1px solid #d6e5fb}
+.paper-history .section-head{flex-wrap:wrap}
+.paper-table th{background:#f3f6fb}
+.paper-table td{color:var(--text)}
+.paper-demo-tag{white-space:nowrap}
+@media(max-width:420px){.paper-account-grid{grid-template-columns:1fr}.paper-balance{grid-column:auto}.paper-estimate{grid-template-columns:1fr}.paper-price strong{font-size:25px}.paper-table{font-size:10px}}
