@@ -167,8 +167,8 @@ export function calculateLevels(m5: Candle[], m15: Candle[], h1: Candle[], h4: C
     all: merged,
     // Show the nearest zones on each side of the live price, while preserving
     // each pivot's original identity for breakout/breakdown event detection.
-    resistance: merged.filter(x => x.price > price).map(x => ({ ...x, flipped: x.side === "support" })).sort((a, b) => a.price - b.price).slice(0, 4),
-    support: merged.filter(x => x.price < price).map(x => ({ ...x, flipped: x.side === "resistance" })).sort((a, b) => b.price - a.price).slice(0, 4),
+    resistance: merged.filter(x => x.price > price).map(x => ({ ...x, flipped: x.side === "support" })).sort((a, b) => a.price - b.price).slice(0, 5),
+    support: merged.filter(x => x.price < price).map(x => ({ ...x, flipped: x.side === "resistance" })).sort((a, b) => b.price - a.price).slice(0, 5),
     atr: baseAtr,
   };
 }
