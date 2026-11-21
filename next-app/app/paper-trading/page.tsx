@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from "react";
 import { binance } from "@/lib/market";
 import Link from "next/link";
 import { RotateCcw, ShoppingCart, TrendingDown } from "lucide-react";
+import SmartChart from "../chart/page";
+import BreakoutMonitorPage from "../breakout/page";
 
 type Trade = { id:number; side:"buy"|"sell"; price:number; qty:number; total:number; fee:number; time:string; pnl?:number };
 type Account = { cash:number; btc:number; averageEntry:number; realized:number; trades:Trade[] };
@@ -12,6 +14,7 @@ const blank=():Account=>({cash:START,btc:0,averageEntry:0,realized:0,trades:[]})
 
 export default function PaperTradingPage(){
  const [price,setPrice]=useState(0),[change,setChange]=useState(0),[connected,setConnected]=useState(false);
+ const [tab,setTab]=useState<"trading"|"analysis"|"breakout">("trading");
  const [account,setAccount]=useState<Account>(blank),[ready,setReady]=useState(false),[mode,setMode]=useState<"buy"|"sell">("buy"),[amount,setAmount]=useState("100"),[notice,setNotice]=useState("");
  const orderLock=useRef(false);
  useEffect(()=>{try{const saved=localStorage.getItem("btc-radar-paper-account-v1");if(saved){const p=JSON.parse(saved) as Account;if(Number.isFinite(p.cash)&&p.cash>=0&&Number.isFinite(p.btc)&&p.btc>=0&&Number.isFinite(p.averageEntry)&&p.averageEntry>=0&&Number.isFinite(p.realized)&&Array.isArray(p.trades))setAccount({...blank(),...p,trades:p.trades.filter((t:Trade)=>t&&Number.isFinite(t.price)&&Number.isFinite(t.qty)&&Number.isFinite(t.total)).slice(0,100)});}}catch{}setReady(true);},[]);
@@ -45,7 +48,13 @@ export default function PaperTradingPage(){
  };
  const reset=()=>{if(window.confirm("هل تريد تصفير الحساب التجريبي وإلغاء سجل العمليات؟")){setAccount(blank());setAmount("100");setNotice("تمت إعادة الحساب إلى 10,000 USDT افتراضية.");}};
  return <main className="shell paper-shell">
-  <header className="topbar"><Link className="brand" href="/"><span className="brand-icon">₿</span><span><b>BTC RADAR</b><small>التداول التجريبي</small></span></Link><nav className="smart-nav"><Link href="/BTC-RADAR/">لوحة التحليل</Link><Link href="/breakout/">رادار الكسر</Link><Link className="active" href="/paper-trading/">التداول التجريبي</Link></nav><div className={"connection "+(connected?"online":"offline")}><i/>{connected?"السعر مباشر":"بانتظار السعر"}</div></header>
+  <header className="topbar"><Link className="brand" href="/"><span className="brand-icon">₿</span><span><b>BTC RADAR</b><small>منصة التداول والتدريب</small></span></Link><div className={"connection "+(connected?"online":"offline")}><i/>{connected?"السعر مباشر":"بانتظار السعر"}</div></header>
+  <nav className="paper-main-tabs" aria-label="أقسام BTC RADAR">
+   <button className={tab==="trading"?"active":""} onClick={()=>setTab("trading")}>التداول التجريبي</button>
+   <button className={tab==="analysis"?"active":""} onClick={()=>setTab("analysis")}>تحليل السوق</button>
+   <button className={tab==="breakout"?"active":""} onClick={()=>setTab("breakout")}>رادار الكسر</button>
+  </nav>
+  {tab==="analysis"?<div className="paper-embedded"><SmartChart/></div>:tab==="breakout"?<div className="paper-embedded"><BreakoutMonitorPage/></div>:<>
   <section className="hero"><div><div className="eyebrow">محاكاة تعليمية · بدون أموال حقيقية</div><h1>التداول التجريبي <span>BTCUSDT</span></h1><p>تدرّب على الشراء والبيع، وتابع كيف يتغير رصيدك وقيمة محفظتك مع حركة سعر البيتكوين.</p></div></section>
   <section className="panel paper-price"><div><span className="muted">سعر BTC الحالي · USDT</span><strong>{price?money(price):"جاري تحميل السعر..."}</strong><small className={change>=0?"positive":"negative"}>{price?(change>=0?"+":"")+money(change)+"% خلال 24 ساعة":"—"}</small></div><div className="paper-price-side"><span className="muted">السعر يتحدث تلقائيًا</span><b className={change>=0?"positive":"negative"}>{change>=0?"▲":"▼"} {money(Math.abs(change))}%</b></div></section>
   <section className="paper-account-grid">
@@ -67,5 +76,6 @@ export default function PaperTradingPage(){
    {account.trades.length?<div className="paper-table-wrap"><table className="paper-table"><thead><tr><th>العملية</th><th>السعر</th><th>الكمية BTC</th><th>الإجمالي</th><th>الرسوم</th><th>النتيجة</th><th>الوقت</th></tr></thead><tbody>{account.trades.map(t=><tr key={t.id}><td><b className={t.side==="buy"?"positive":"negative"}>{t.side==="buy"?"شراء":"بيع"}</b></td><td>{money(t.price)}</td><td>{money(t.qty,8)}</td><td>{money(t.total)}</td><td>{money(t.fee)}</td><td className={t.pnl===undefined?"":t.pnl>=0?"positive":"negative"}>{t.pnl===undefined?"—":(t.pnl>=0?"+":"")+money(t.pnl)}</td><td>{t.time}</td></tr>)}</tbody></table></div>:<div className="paper-empty">لم تنفذ أي صفقة بعد. ابدأ بشراء كمية صغيرة للتعلم، ثم تابع كيف تتغير قيمة محفظتك مع السعر.</div>}
   </section>
   <footer><span>BTC RADAR · التداول التجريبي</span><span>الرصيد الابتدائي {money(START)} USDT</span><span>لا توجد أموال حقيقية</span></footer>
+ </>}
  </main>;
 }
