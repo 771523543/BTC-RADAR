@@ -42,6 +42,7 @@ export default function BreakoutMonitorPage() {
   const [error, setError] = useState("");
   const [permission, setPermission] = useState(false);
   const [lastScan, setLastScan] = useState(0);
+  useEffect(() => { if ("Notification" in window) setPermission(Notification.permission === "granted"); }, []);
   const price = Number(tick?.lastPrice || 0);
   const levels = useMemo(() => calculateLevels(m5, m15, h1, h4, price), [m5, m15, h1, h4, price]);
   const resistance = levels.resistance[0];
@@ -78,7 +79,7 @@ export default function BreakoutMonitorPage() {
   }, [market]);
 
   useEffect(() => {
-    if (!last || !resistance || !support || last.time === lastScan) return;
+    if (!last || last.time === lastScan) return;
     setLastScan(last.time);
     const recent = closed.slice(-16);
     const candidates: BreakEvent[] = [];
