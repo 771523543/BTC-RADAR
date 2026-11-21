@@ -320,3 +320,39 @@ footer{color:var(--muted)}
 .short-footnote{font-size:11px;line-height:1.9;color:#78869a;margin:12px 0 0}
 .short-error{color:#a33;font-size:12px}
 @media(max-width:520px){.short-radar{padding:13px}.short-radar-head h3{font-size:19px}.short-price-strip,.short-level-grid{gap:6px}.short-price-strip>div,.short-level-grid>div{padding:9px 7px}.short-price-strip b,.short-level-grid b{font-size:12px}.short-price-strip small,.short-level-grid small{font-size:10px}}
+
+
+/* Candle analysis engine and instant decision panel */
+.candle-analysis{margin:16px 0;padding:17px;background:#fff;border:1px solid #dce4ef}
+.analysis-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.analysis-head h3{margin:5px 0;font-size:20px;color:#172338}
+.analysis-head p,.analysis-muted,.analysis-last,.analysis-disclaimer{font-size:11px;line-height:1.8;color:#68778d;margin:5px 0}
+.analysis-live{font-size:10px;color:#087a56;background:#e9f8f1;border:1px solid #b9e5d1;border-radius:25px;padding:6px 9px;white-space:nowrap}
+.analysis-controls{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:13px 0}
+.analysis-controls>div:first-child{display:grid;gap:5px}
+.analysis-controls small,.analysis-metrics small,.analysis-levels small,.analysis-decision small{font-size:10px;color:#68778d}
+.analysis-controls b{font-size:20px;color:#172338;direction:ltr}
+.analysis-frames{display:flex;gap:5px}
+.analysis-frames button{padding:8px 12px;border:1px solid #dce4ef;border-radius:8px;background:#f7f9fc;color:#526174;font-weight:700}
+.analysis-frames button.active{background:#e7f0ff;border-color:#9bbbe9;color:#205ca8}
+.analysis-decision{padding:15px;border:1px solid #dce4ef;border-right:4px solid #94a3b8;border-radius:11px;background:#f7f9fc}
+.analysis-decision strong{display:block;font-size:25px;margin:4px 0;color:#526174}
+.analysis-decision p{font-size:12px;line-height:1.9;margin:0;color:#526174}
+.analysis-decision.buy{background:#eaf8f1;border-color:#b9e5d1;border-right-color:#12845f}
+.analysis-decision.buy strong{color:#087a56}
+.analysis-decision.sell{background:#fff0f2;border-color:#efc4ca;border-right-color:#d94b5b}
+.analysis-decision.sell strong{color:#bd3548}
+.analysis-decision.wait{background:#fff8e8;border-color:#ead7a9;border-right-color:#c18b2d}
+.analysis-decision.wait strong{color:#946716}
+.analysis-metrics,.analysis-levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
+.analysis-metrics>div,.analysis-levels>div{display:flex;flex-direction:column;gap:5px;padding:11px 9px;border:1px solid #e0e7f0;border-radius:9px;background:#f7f9fc;min-width:0}
+.analysis-metrics b,.analysis-levels b{font-size:13px;color:#172338;overflow-wrap:anywhere}
+.analysis-metrics span,.analysis-levels span{font-size:10px;color:#68778d;line-height:1.6}
+.analysis-patterns{margin-top:12px}
+.analysis-patterns h4{font-size:14px;color:#24354d;margin:0 0 8px}
+.analysis-patterns>div{display:flex;flex-direction:column;gap:4px;padding:10px;margin:6px 0;border:1px solid #e0e7f0;border-radius:9px;background:#fff}
+.analysis-patterns>div b{font-size:12px;color:#24354d}
+.analysis-patterns>div span,.analysis-patterns>p{font-size:11px;line-height:1.8;color:#68778d;margin:0}
+.analysis-error{font-size:12px;color:#bd3548}
+.analysis-disclaimer{padding-top:8px;border-top:1px solid #e6ebf2}
+@media(max-width:520px){.candle-analysis{padding:12px}.analysis-head h3{font-size:18px}.analysis-controls{align-items:flex-start;flex-direction:column}.analysis-metrics,.analysis-levels{gap:6px}.analysis-metrics>div,.analysis-levels>div{padding:9px 7px}.analysis-metrics b,.analysis-levels b{font-size:11px}.analysis-metrics span,.analysis-levels span{font-size:9px}.analysis-frames{width:100%}.analysis-frames button{flex:1}}
