@@ -212,3 +212,52 @@ footer{color:var(--muted)}
 .paper-live-price>div>span{font-size:11px;color:var(--muted)}
 .paper-live-price strong{font-size:clamp(25px,5vw,36px);font-weight:800;letter-spacing:.2px;color:var(--text);direction:ltr;text-align:right;font-variant-numeric:tabular-nums}
 @media(max-width:480px){.paper-live-price{padding:13px;align-items:flex-start}.paper-live-price strong{font-size:25px}.paper-live-price .paper-live{font-size:10px;padding:6px 8px}}
+
+
+/* Final light surfaces for the unified paper-trading page */
+.paper-live-price{
+  background:linear-gradient(110deg,#ffffff,#f4f7fb)!important;
+  border:1px solid #dce4ef!important;
+  box-shadow:0 5px 22px #263b590d!important;
+}
+.paper-live-price strong{color:#172338!important}
+.paper-live-price>div>span{color:#68778d!important}
+.paper-tabs button{
+  background:#f7f9fc!important;
+  color:#526174!important;
+  border-color:#dce4ef!important;
+}
+.paper-tabs button.buy-active{
+  background:#e9f8f1!important;
+  color:#087a56!important;
+  border-color:#9bd7bf!important;
+}
+.paper-tabs button.sell-active{
+  background:#fff0f2!important;
+  color:#bd3548!important;
+  border-color:#efb7bf!important;
+}
+.paper-input-row{
+  background:#fff!important;
+  border-color:#dce4ef!important;
+}
+.paper-input-row input{
+  background:#fff!important;
+  color:#172338!important;
+  border-color:#dce4ef!important;
+}
+.paper-input-row input::placeholder{color:#98a4b5!important}
+.paper-quick button{
+  background:#f7f9fc!important;
+  color:#40536b!important;
+  border-color:#dce4ef!important;
+}
+.paper-estimate span{
+  background:#f7f9fc!important;
+  border-color:#e0e7f0!important;
+  color:#68778d!important;
+}
+.paper-estimate b{color:#172338!important}
+.paper-notice{background:#eef5ff!important;color:#24558c!important;border-color:#d6e5fb!important}
+.paper-table th{background:#f3f6fb!important}
+.paper-empty{color:#68778d!important}
