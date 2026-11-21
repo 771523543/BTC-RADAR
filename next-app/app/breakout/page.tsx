@@ -84,11 +84,15 @@ export default function BreakoutMonitorPage() {
     const candidates: BreakEvent[] = [];
     for (let i = 1; i < recent.length; i++) {
       const before = recent[i - 1], bar = recent[i];
+      const position = closed.length - recent.length + i;
+      const prior = closed.slice(Math.max(0, position - 20), position);
+      const priorAverage = prior.reduce((sum, candle) => sum + candle.volume, 0) / Math.max(1, prior.length);
+      const eventVolumeRatio = priorAverage > 0 ? bar.volume / priorAverage : 0;
       for (const level of levels.all) {
         if (level.side === "resistance" && before.close <= level.price && bar.close > level.price)
-          candidates.push({ side: "up", level: level.price, time: bar.time, retested: false, failed: false, volumeRatio: averageVolume ? bar.volume / averageVolume : 0 });
+          candidates.push({ side: "up", level: level.price, time: bar.time, retested: false, failed: false, volumeRatio: eventVolumeRatio });
         if (level.side === "support" && before.close >= level.price && bar.close < level.price)
-          candidates.push({ side: "down", level: level.price, time: bar.time, retested: false, failed: false, volumeRatio: averageVolume ? bar.volume / averageVolume : 0 });
+          candidates.push({ side: "down", level: level.price, time: bar.time, retested: false, failed: false, volumeRatio: eventVolumeRatio });
       }
     }
     const latest = candidates.sort((a, b) => a.time - b.time).at(-1);
