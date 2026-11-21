@@ -2,7 +2,7 @@
 import {useEffect,useMemo,useRef,useState} from "react";
 import {binance,calculateLevels,parseCandles,type Candle,type Level} from "@/lib/market";
 type Data={price:number;mark:number;m5:Candle[];m15:Candle[];h1:Candle[];h4:Candle[];time:number};
-type Watch={price:number;side:"support"|"resistance";started:number;result:string;resultAt:number|null};
+type Watch={price:number;side:"support"|"resistance";started:number;result:string;resultAt:number|null;phase:"approach"|"retest"|"done";breakCloseTime?:number};
 const f=(n:number)=>n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 export default function ShortRadar(){
  const [d,setD]=useState<Data|null>(null),[error,setError]=useState("");
@@ -15,21 +15,40 @@ export default function ShortRadar(){
  if(!watch.current){
   const candidates=lv.all.filter(x=>x.price>0).sort((x,y)=>Math.abs(x.price-d.price)-Math.abs(y.price-d.price));
   const pick=candidates[0];
-  if(pick)watch.current={price:pick.price,side:pick.price>=d.price?"resistance":"support",started:Date.now(),result:"قيد المراقبة — لم يصل السعر للمستوى بعد",resultAt:null};
+  if(pick)watch.current={price:pick.price,side:pick.price>=d.price?"resistance":"support",started:Date.now(),result:"قيد المراقبة — لم يصل السعر للمستوى بعد",resultAt:null,phase:"approach"};
  }
  const w=watch.current;
- if(w&&last&&!w.resultAt){
+ if(w&&last&&w.phase!=="done"){
   const tol=Math.max(lv.atr*.18,d.price*.00025);
-  const touched=w.side==="resistance"?last.high>=w.price-tol:last.low<=w.price+tol;
-  if(touched){
-   if(w.side==="resistance"){
-    if(last.close>w.price+tol){w.result="تم اختراق المقاومة بإغلاق 5 دقائق";w.resultAt=Date.now();}
-    else if(last.close<w.price-tol&&last.close<last.open){w.result="رفضت المقاومة السعر وأغلقت الشمعة أسفلها";w.resultAt=Date.now();}
-    else w.result="وصل السعر للمقاومة؛ الشمعة لم تحسم النتيجة بعد";
-   }else{
-    if(last.close<w.price-tol){w.result="تم كسر الدعم بإغلاق 5 دقائق";w.resultAt=Date.now();}
-    else if(last.close>w.price+tol&&last.close>last.open){w.result="ارتد السعر من الدعم وأغلقت الشمعة فوقه";w.resultAt=Date.now();}
-    else w.result="وصل السعر للدعم؛ الشمعة لم تحسم النتيجة بعد";
+  if(w.side==="support"&&w.phase==="retest"){
+   // After the breakdown, wait for a LATER closed candle to revisit the broken support.
+   if(last.closeTime>(w.breakCloseTime??0)){
+    const retested=last.high>=w.price-tol;
+    if(retested&&last.close<w.price-tol){
+     w.result="إعادة اختبار ناجحة: عاد السعر إلى الدعم المكسور وفشل في الإغلاق فوقه — تأكيد مبدئي للشورت";
+     w.phase="done";w.resultAt=Date.now();
+    }else if(last.close>w.price+tol){
+     w.result="فشل الكسر: أغلقت شمعة 5 دقائق فوق الدعم المكسور — ألغِ سيناريو الشورت";
+     w.phase="done";w.resultAt=Date.now();
+    }else{
+     w.result="تم كسر الدعم. ننتظر عودة السعر لاختبار المستوى من الأسفل؛ لا ننتقل إلى دعم آخر.";
+    }
+   }
+  }else if(w.phase==="approach"){
+   const touched=w.side==="resistance"?last.high>=w.price-tol:last.low<=w.price+tol;
+   if(touched){
+    if(w.side==="resistance"){
+     if(last.close>w.price+tol){w.result="تم اختراق المقاومة بإغلاق 5 دقائق";w.phase="done";w.resultAt=Date.now();}
+     else if(last.close<w.price-tol&&last.close<last.open){w.result="رفضت المقاومة السعر وأغلقت الشمعة أسفلها";w.phase="done";w.resultAt=Date.now();}
+     else w.result="وصل السعر للمقاومة؛ ننتظر إغلاقًا يحسم الرفض أو الاختراق.";
+    }else{
+     if(last.close<w.price-tol){
+      w.result="تم كسر الدعم بإغلاق 5 دقائق. المرحلة التالية: انتظار إعادة الاختبار من الأسفل.";
+      w.phase="retest";w.breakCloseTime=last.closeTime;
+     }else if(last.close>w.price+tol&&last.close>last.open){
+      w.result="ارتد السعر من الدعم وأغلقت الشمعة فوقه";w.phase="done";w.resultAt=Date.now();
+     }else w.result="وصل السعر للدعم؛ الشمعة لم تحسم النتيجة بعد.";
+    }
    }
   }
  }
@@ -37,7 +56,8 @@ export default function ShortRadar(){
  const near=distance<=Math.max(lv.atr*.25,d.price*.0004);
  const status=w?.result||"لا يوجد مستوى قيد المراقبة";
  let action="استمر في متابعة المستوى نفسه؛ لا تغيّر المستوى لمجرد ظهور مستوى جديد أقرب.";
- if(w?.resultAt)action="تم تسجيل نتيجة المستوى. ستبقى النتيجة ظاهرة، ثم يبدأ الرادار مراقبة المستوى التالي بعد دقيقة.";
+ if(w?.phase==="retest")action="لا تفتح شورت لمجرد الكسر. انتظر رجوع السعر إلى الدعم المكسور؛ إذا فشل في الإغلاق فوقه تسجل إعادة اختبار ناجحة، وإذا أغلق فوقه يُلغى سيناريو الشورت.";
+ else if(w?.resultAt)action="تم حسم نتيجة المستوى. ستبقى النتيجة ظاهرة، ثم يبدأ الرادار مراقبة مستوى جديد بعد دقيقة.";
  else if(near&&w?.side==="resistance")action="السعر وصل إلى نطاق المقاومة التي نراقبها. انتظر إغلاق شمعة 5 دقائق لتحديد: رفض أم اختراق.";
  else if(near&&w?.side==="support")action="السعر وصل إلى نطاق الدعم الذي نراقبه. انتظر إغلاق شمعة 5 دقائق لتحديد: ارتداد أم كسر.";
  else if(w)action=`نراقب المستوى ${f(w.price)} ولن ننتقل عنه. المتبقي لوصول السعر إليه ${f(distance)} USDT.`;
@@ -49,7 +69,7 @@ export default function ShortRadar(){
  <div className="short-price-strip"><div><small>السعر المباشر</small><b>{f(d.price)}</b></div><div><small>Mark Price</small><b>{f(d.mark)}</b></div><div><small>آخر تحديث</small><b>{new Date(d.time).toLocaleTimeString("ar")}</b></div></div>
  <div className="short-status"><small>المستوى المثبّت قيد المتابعة</small><h4>{a?.w?.side==="resistance"?"مقاومة نراقبها":"دعم نراقبه"} · {a?.w?f(a.w.price):"لم يتحدد"}</h4><p>{a?.status}</p><p>{a?.action}</p><p>السعر الحالي: {f(d.price)} USDT · المسافة عن المستوى: {a?f(a.distance):"—"} USDT</p></div>
  <div className="short-level-grid"><div><small>أقرب مقاومة متغيرة</small><b>{a?.resistances?f(a.resistances.price):"—"}</b></div><div><small>أقرب دعم متغير</small><b>{a?.supports?f(a.supports.price):"—"}</b></div><div><small>آخر إغلاق 5 دقائق</small><b>{a?.last?f(a.last.close):"—"}</b></div></div>
- <div className="short-plan"><h4>قراءة نتيجة المستوى</h4><p>إذا كانت مقاومة: نسجل رفض السعر أو الاختراق بعد إغلاق الشمعة.</p><p>إذا كان دعمًا: نسجل الارتداد أو الكسر بعد إغلاق الشمعة.</p><p>بعد تسجيل النتيجة تبقى ظاهرة دقيقة، ثم يختار الرادار مستوى جديدًا للمراقبة.</p></div>
- <p className="short-footnote">السعر يتحدث كل 15 ثانية. المستوى المثبّت لا يتغير بسبب ظهور مستويات أحدث. الحسم يعتمد على شموع 5 دقائق المغلقة؛ لا ينفذ الموقع صفقات حقيقية.{error?" "+error:""}</p>
+ <div className="short-plan"><h4>قراءة نتيجة المستوى</h4><p>إذا كانت مقاومة: نسجل رفض السعر أو الاختراق بعد إغلاق الشمعة.</p><p>إذا كان دعمًا: نسجل الارتداد أو الكسر بعد إغلاق الشمعة.</p><p>عند كسر الدعم يثبت الرادار على الدعم نفسه حتى يراقب إعادة اختباره: فشل الإغلاق فوقه = تأكيد مبدئي للشورت، والإغلاق فوقه = فشل الكسر وإلغاء السيناريو.</p></div>
+ <p className="short-footnote">السعر يتحدث كل 15 ثانية. المستوى المثبّت لا يتغير بسبب ظهور مستويات أحدث. كسر الدعم لا ينهي المتابعة؛ يظل المستوى مثبتًا حتى نتيجة إعادة الاختبار. الحسم يعتمد على شموع 5 دقائق المغلقة؛ لا ينفذ الموقع صفقات حقيقية.{error?" "+error:""}</p>
  </>}</section>;
 }
