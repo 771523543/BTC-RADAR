@@ -89,7 +89,7 @@ function analyze(s:Data):Plan{
  const nearResistance=resistance!==null&&entry<=resistance&&last.close<=resistance&&resistanceDistance!==null&&resistanceDistance<=nearThreshold;
  const supportBounce=support!==null&&entry>=support&&last.low<=support+nearDistance&&last.close>support&&last.close>last.open;
  const resistanceRejection=resistance!==null&&entry<=resistance&&last.high>=resistance-nearDistance&&last.close<resistance&&last.close<last.open;
- const priceBelowSupport=support!==null&&entry<support,priceAboveResistance=resistance!==null&&entry>resistance;
+ const priceBelowSupport=support!==null&&Number.isFinite(support)&&Number.isFinite(entry)&&entry<support,priceAboveResistance=resistance!==null&&Number.isFinite(resistance)&&Number.isFinite(entry)&&entry>resistance;
  const supportSweep=support!==null&&last.low<support&&last.close>support&&last.close>last.open;
  const resistanceSweep=resistance!==null&&last.high>resistance&&last.close<resistance&&last.close<last.open;
  const supportEvidence=!priceAboveResistance&&((!priceBelowSupport&&(nearSupport||supportBounce))||supportSweep);
