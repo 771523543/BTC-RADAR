@@ -150,8 +150,12 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker):Plan{
    const brokeSupport=support!==null&&previousClosed.close>=support&&closedBelow(support);
    const brokeResistance=resistance!==null&&previousClosed.close<=resistance&&closedAbove(resistance);
    if(brokeSupport||brokeResistance){
-    tracker.level=brokeSupport?support:resistance;tracker.type=brokeSupport?"BROKEN_SUPPORT":"BROKEN_RESISTANCE";tracker.status="confirmed";tracker.remaining=12;
-    tracker.detail=(brokeSupport?"كسر مؤكد بإغلاق شمعة — ":"اختراق مؤكد بإغلاق شمعة — ")+confirmationText(tracker.type,tracker.level);
+    const newType:BreakType=brokeSupport?"BROKEN_SUPPORT":"BROKEN_RESISTANCE";
+    const newLevel=brokeSupport?support:resistance;
+    if(newLevel!==null){
+     tracker.level=newLevel;tracker.type=newType;tracker.status="confirmed";tracker.remaining=12;
+     tracker.detail=(brokeSupport?"كسر مؤكد بإغلاق شمعة — ":"اختراق مؤكد بإغلاق شمعة — ")+confirmationText(newType,newLevel);
+    }
    }
   }
  }
