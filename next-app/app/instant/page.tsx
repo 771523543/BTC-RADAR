@@ -67,7 +67,7 @@ function pattern(c:C[],ctx:PatternContext):Pattern{
  const correctContext=found.kind==="bull"?nearSupportContext:found.kind==="bear"?nearResistanceContext:true;
  const weakContext=found.type.startsWith("انعكاسي")&&!correctContext;
  const finalStatus=weakContext?"weak":status;
- const score=found.kind==="neutral"?0:found.baseScore*(weakContext ? .3 : 1)*(status==="confirmed"?(volumeConfirmed?1:.65):.2);
+ const score=found.kind==="neutral"||weakContext||status!=="confirmed"?0:found.baseScore*(volumeConfirmed?1:.65);
  const detail=weakContext?"ضعيف السياق: النموذج الانعكاسي ظهر بعيداً عن "+(found.kind==="bull"?"الدعم / Sweep أسفل الدعم":"المقاومة / Sweep أعلى المقاومة")+".":status==="confirmed"?(volumeConfirmed?"تأكيد بإغلاق الشمعة التالية مع فوليوم ≥ 1.1× المتوسط":"تأكيد بالإغلاق؛ الفوليوم أقل من 1.1× المتوسط"):"بانتظار التأكيد عند "+fmt(confirmation)+" ⏳ · يلزم إغلاق الشمعة التالية "+(found.kind==="bull"?"فوق المستوى":found.kind==="bear"?"تحت المستوى":"خارج نطاق الحيرة");
  return {...found,confirmation,status:finalStatus,score,detail,volumeConfirmed};
 }
