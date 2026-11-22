@@ -140,12 +140,14 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker):Plan{
    }else if(reclaimed){
     tracker.status="reclaimed";tracker.detail="استعادة المستوى بإغلاق شمعة؛ فشل الكسر / الاختراق.";
    }else if(candleTouched&&tracker.status!=="retest-confirmed"){
-    tracker.status="retest";
     const retestDirection=type==="BROKEN_SUPPORT"?last.close<lvl-buffer&&last.close<last.open:last.close>lvl+buffer&&last.close>last.open;
     if(retestDirection&&volumeOk){
      tracker.status="retest-confirmed";
      tracker.detail=type==="BROKEN_SUPPORT"?"إعادة اختبار مؤكدة في اتجاه الكسر: رُفض الدعم المكسور كمقاومة، والإغلاق والفوليوم يؤيدان الهبوط.":"إعادة اختبار مؤكدة في اتجاه الاختراق: تماسكت المقاومة المخترقة كدعم، والإغلاق والفوليوم يؤيدان الصعود.";
-    }else tracker.detail="تمت ملامسة المستوى المكسور؛ إعادة الاختبار قيد التقييم — "+(retestDirection?"اتجاه الإغلاق مناسب لكن الفوليوم غير كافٍ.":"لم يظهر إغلاق رفض/تماسك مكتمل بعد.");
+    }else{
+     tracker.status="confirmed";
+     tracker.detail="لامست الشمعة المغلقة المستوى المكسور، لكن نتيجة الاختبار لم تتأكد بعد — "+(retestDirection?"اتجاه الإغلاق مناسب لكن الفوليوم غير كافٍ.":"لم يظهر إغلاق رفض/تماسك مكتمل.");
+    }
    }else if(tracker.remaining<=0){tracker.status="expired";tracker.detail="انتهت نافذة متابعة المستوى بعد 12 شمعة مغلقة.";}
    else if(tracker.status!=="retest-confirmed")tracker.detail="متابعة المستوى المرجعي المكسور · متبقٍ "+tracker.remaining+" شمعة مغلقة.";
   }
@@ -172,11 +174,16 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker):Plan{
  if(activeBreak&&tracker.status!=="instant"&&tracker.status!=="retest-confirmed"){
   const lvl=tracker.level as number;
   const liveTouch=liveCandle.low<=lvl+buffer&&liveCandle.high>=lvl-buffer;
-  const approachingFromBreakSide=tracker.type==="BROKEN_SUPPORT"?entry<lvl+buffer:entry>lvl-buffer;
-  if(liveTouch&&approachingFromBreakSide&&tracker.status==="confirmed"){
-   tracker.status="retest";tracker.detail="إعادة اختبار لحظية للمستوى المرجعي من الجهة المعاكسة؛ ننتظر إغلاق الشمعة لتأكيد الرفض أو التماسك.";
-  }else if(tracker.status==="retest"&&!liveTouch&&tracker.detail.includes("إعادة اختبار لحظية")){
-   tracker.detail="تم رصد عودة السعر إلى منطقة المستوى المكسور؛ ننتظر إغلاق الشمعة لتأكيد نتيجة الاختبار.";
+  const currentDistance=Math.abs(entry-lvl);
+  const currentNear=Number.isFinite(currentDistance)&&currentDistance<=buffer;
+  const approachingFromBreakSide=tracker.type==="BROKEN_SUPPORT"?entry<lvl:entry>lvl;
+  if(liveTouch&&currentNear&&approachingFromBreakSide&&tracker.status==="confirmed"){
+   tracker.status="retest";tracker.detail="إعادة اختبار لحظية للمستوى المرجعي: السعر عاد فعلياً إلى نطاق القرب من الجهة المعاكسة؛ ننتظر إغلاق الشمعة لتأكيد الرفض أو التماسك.";
+  }else if(tracker.status==="retest"&&(!liveTouch||!currentNear||!approachingFromBreakSide)){
+   tracker.status="confirmed";
+   tracker.detail="اختراق مؤكد قيد المتابعة — السعر ابتعد عن المستوى المرجعي بمقدار "+fmt(currentDistance)+" USDT، وبانتظار عودة فعلية إلى نطاق القرب ("+fmt(buffer)+" USDT) لاختباره.";
+  }else if(tracker.status==="confirmed"){
+   tracker.detail="متابعة بعد "+(tracker.type==="BROKEN_SUPPORT"?"كسر الدعم":"اختراق المقاومة")+" — السعر يبعد "+fmt(currentDistance)+" USDT عن المستوى المرجعي؛ بانتظار عودة فعلية إلى نطاق القرب ("+fmt(buffer)+" USDT) لاختباره.";
   }
  }
  const instantBreak=activeBreak&&tracker.status==="instant";
@@ -290,9 +297,14 @@ useEffect(()=>{
  const candleKey="CANDLE_CLOSE:"+frame+":"+candle.time;
  if(!reportDedupeRef.current.has(candleKey)){
   events.push("CANDLE_CLOSE");
-  reasons.push("أُغلقت شمعة مكتملة جديدة على "+frame+". الاتجاه الأعلى: 4H "+plan.overallTrend+" و1H "+plan.trend1h+". موقع السعر: "+plan.priceLocation+". الفوليوم "+fmt(volumeRatio,2)+"× متوسط 20 شمعة. "+(plan.rangeSqueeze?"النطاق منضغط (Squeeze).":plan.rangeExpansion?"النطاق يتوسع مع نشاط ملحوظ.":"لا يوجد انضغاط/توسع استثنائي.")+" مسافة EMA20: "+fmt(plan.emaDistanceAtr,2)+" ATR.");
-  interpretations.push("إغلاق الشمعة يثبت بيانات هذه الفترة فقط؛ النموذج "+plan.patternAr+" حالته "+(plan.confirmationStatus==="confirmed"?"مؤكد":plan.confirmationStatus==="pending"?"بانتظار التأكيد":plan.confirmationStatus==="weak"?"ضعيف السياق":"غير متشكل")+". "+(volumeRatio>=1.15?"الفوليوم أعلى من المتوسط ويدعم الحركة نسبياً.":volumeRatio<.7?"الفوليوم ضعيف؛ الحركة أقل موثوقية.":"الفوليوم قريب من المتوسط؛ لا يعطي تأكيداً قوياً بمفرده."));
-  figures.push("الإغلاق: "+fmt(candle.close)+" USDT · النموذج: "+plan.patternAr+" · الفوليوم النسبي: "+fmt(volumeRatio,2)+"× · الدعم: "+(dist(plan.support)===null?"—":fmt(dist(plan.support)!))+" USDT · المقاومة: "+(dist(plan.resistance)===null?"—":fmt(dist(plan.resistance)!))+" USDT · حالة الإشارة: "+plan.side+" — "+plan.reason);
+  const candleDirection=candle.close>candle.open?"صاعدة":candle.close<candle.open?"هابطة":"دوجي/محايدة";
+  const averageRange=data.candles.slice(-21,-1).reduce((sum,x)=>sum+Math.max(0,x.high-x.low),0)/Math.max(1,data.candles.slice(-21,-1).length);
+  const candleRange=Math.max(0,candle.high-candle.low);
+  const relativeRange=averageRange>0?candleRange/averageRange:0;
+  const patternState=plan.patternType==="حيرة"?"نموذج حيرة ("+plan.patternAr+")، ولا يمنح اتجاهاً مستقلاً":plan.confirmationStatus==="confirmed"?"النموذج "+plan.patternAr+" مؤكد وفق إغلاق شمعة التأكيد":plan.confirmationStatus==="weak"?"النموذج "+plan.patternAr+" ضعيف السياق ولا يُعد إشارة اتجاهية":plan.confirmationStatus==="failed"?"النموذج "+plan.patternAr+" فشل":plan.pattern?"النموذج "+plan.patternAr+" بانتظار التأكيد":"لا يوجد نموذج شموع مكتمل";
+  reasons.push("أُغلقت شمعة مكتملة جديدة على "+frame+". الشمعة الأخيرة "+candleDirection+" (فتح "+fmt(candle.open)+"، إغلاق "+fmt(candle.close)+"). اتجاه 4H: "+plan.overallTrend+" و1H: "+plan.trend1h+". موقع السعر: "+plan.priceLocation+". الفوليوم "+fmt(volumeRatio,2)+"× متوسط 20 شمعة. "+(plan.rangeSqueeze?"النطاق منضغط (Squeeze).":plan.rangeExpansion?"النطاق يتوسع مع نشاط ملحوظ.":"لا يوجد انضغاط/توسع استثنائي.")+" مسافة EMA20: "+fmt(plan.emaDistanceAtr,2)+" ATR.");
+  interpretations.push("حجم مدى الشمعة "+fmt(relativeRange,2)+"× متوسط مدى 20 شمعة. "+patternState+". ملاحظة: اتجاه الشمعة المغلقة يوصف مستقلاً عن نموذج الشمعة؛ إذا كان النموذج السابق حيرة فلا يعني ذلك أن الشمعة الجديدة نفسها حيرة أو أنها تؤيد النموذج السابق. "+(volumeRatio>=1.15?"الفوليوم أعلى من المتوسط ويدعم الحركة نسبياً.":volumeRatio<.7?"الفوليوم ضعيف؛ الحركة أقل موثوقية.":"الفوليوم قريب من المتوسط؛ لا يعطي تأكيداً قوياً بمفرده."));
+  figures.push("الإغلاق: "+fmt(candle.close)+" USDT · اتجاه الشمعة: "+candleDirection+" · مدى الشمعة: "+fmt(relativeRange,2)+"× متوسط المدى · النموذج: "+(plan.patternAr||"لا يوجد")+" ("+plan.confirmationStatus+") · الفوليوم النسبي: "+fmt(volumeRatio,2)+"× · الدعم: "+(dist(plan.support)===null?"—":fmt(dist(plan.support)!))+" USDT · المقاومة: "+(dist(plan.resistance)===null?"—":fmt(dist(plan.resistance)!))+" USDT · حالة الإشارة: "+plan.side+" — "+plan.reason);
   followUps.push("راقب إغلاق الشمعة التالية بالنسبة للمستويات؛ لا تعتمد على حركة داخل الشمعة وحدها. "+(plan.confirmationStatus==="pending"?plan.confirmationDetail:""));
   reportDedupeRef.current.add(candleKey);
  }
