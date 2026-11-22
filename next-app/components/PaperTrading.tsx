@@ -2,8 +2,6 @@
 import { useEffect, useRef, useState } from "react";
 import { binance } from "@/lib/market";
 import { RotateCcw, ShoppingCart, TrendingDown } from "lucide-react";
-import ShortRadar from "./ShortRadar";
-import CandleAnalysis from "./CandleAnalysis";
 
 type Trade={id:number;side:"buy"|"sell";price:number;qty:number;total:number;fee:number;time:string;pnl?:number};
 type Account={cash:number;btc:number;averageEntry:number;realized:number;trades:Trade[]};
@@ -42,8 +40,6 @@ export default function PaperTradingPage(){
   </section>
   <section className="panel paper-history"><div className="section-head"><div><h3>آخر الصفقات</h3><p className="muted">يحفظ الحساب على هذا الجهاز والمتصفح</p></div><button className="clear-btn" onClick={reset}><RotateCcw size={14}/> إعادة ضبط الحساب</button></div>
    {account.trades.length?<div className="paper-table-wrap"><table className="paper-table"><thead><tr><th>العملية</th><th>السعر</th><th>الكمية BTC</th><th>الإجمالي</th><th>الرسوم</th><th>النتيجة</th></tr></thead><tbody>{account.trades.map(t=><tr key={t.id}><td><b className={t.side==="buy"?"positive":"negative"}>{t.side==="buy"?"شراء":"بيع"}</b></td><td>{money(t.price)}</td><td>{money(t.qty,8)}</td><td>{money(t.total)}</td><td>{money(t.fee)}</td><td className={t.pnl===undefined?"":t.pnl>=0?"positive":"negative"}>{t.pnl===undefined?"—":(t.pnl>=0?"+":"")+money(t.pnl)}</td></tr>)}</tbody></table></div>:<div className="paper-empty">لم تنفذ أي صفقة بعد. ابدأ بكمية صغيرة للتدرب.</div>}
-  <CandleAnalysis />
-  <ShortRadar />
     </section><footer><span>BTC RADAR · لوحة واحدة</span><span>بيانات السوق من Binance</span><span>التداول التجريبي فقط</span></footer>
  </main>;
 }
