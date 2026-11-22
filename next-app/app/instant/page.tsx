@@ -48,10 +48,10 @@ function pattern(c:C[],ctx:PatternContext):Pattern{
  if(!found&&bull(a)&&bear(b)&&b.open>=a.close&&b.close<=a.open&&body(b)>=body(a))
   found={name:"Bearish Engulfing",nameAr:"الابتلاع البيعي",kind:"bear",type:"انعكاسي هابط",signal:b,model:[a,b],baseScore:9};
  // Three-candle reversal formations; the fourth/latest candle confirms the pattern.
- if(!found&&bear(a)&&small(b)&&bull(c[n-2])&&large(a)&&c[n-2].close>(a.open+a.close)/2)
-  found={name:"Morning Star",nameAr:"نجمة الصباح",kind:"bull",type:"انعكاسي صاعد",signal:c[n-2],model:[a,b,c[n-2]],baseScore:10};
- if(!found&&bull(a)&&small(b)&&bear(c[n-2])&&large(a)&&c[n-2].close<(a.open+a.close)/2)
-  found={name:"Evening Star",nameAr:"نجمة المساء",kind:"bear",type:"انعكاسي هابط",signal:c[n-2],model:[a,b,c[n-2]],baseScore:10};
+ if(!found&&bear(prior)&&small(a)&&bull(b)&&large(prior)&&b.close>(prior.open+prior.close)/2)
+  found={name:"Morning Star",nameAr:"نجمة الصباح",kind:"bull",type:"انعكاسي صاعد",signal:b,model:[prior,a,b],baseScore:10};
+ if(!found&&bull(prior)&&small(a)&&bear(b)&&large(prior)&&b.close<(prior.open+prior.close)/2)
+  found={name:"Evening Star",nameAr:"نجمة المساء",kind:"bear",type:"انعكاسي هابط",signal:b,model:[prior,a,b],baseScore:10};
  // Indecision patterns are informational and never generate directional points.
  if(!found&&doji)found={name:"Doji",nameAr:"دوجي · حيرة وتردد",kind:"neutral",type:"حيرة",signal:b,model:[b],baseScore:0};
  if(!found&&bodyRatio<=.35&&safeRatio(Math.min(bu,bl),rb)>=.15&&Math.abs(bu-bl)/Math.max(rb,1e-12)<=.35)
@@ -67,7 +67,7 @@ function pattern(c:C[],ctx:PatternContext):Pattern{
  const correctContext=found.kind==="bull"?nearSupportContext:found.kind==="bear"?nearResistanceContext:true;
  const weakContext=found.type.startsWith("انعكاسي")&&!correctContext;
  const finalStatus=weakContext?"weak":status;
- const score=found.kind==="neutral"?0:found.baseScore*(weakContext?.3:1)*(status==="confirmed"?(volumeConfirmed?1:.65):.2);
+ const score=found.kind==="neutral"?0:found.baseScore*(weakContext ? .3 : 1)*(status==="confirmed"?(volumeConfirmed?1:.65):.2);
  const detail=weakContext?"ضعيف السياق: النموذج الانعكاسي ظهر بعيداً عن "+(found.kind==="bull"?"الدعم / Sweep أسفل الدعم":"المقاومة / Sweep أعلى المقاومة")+".":status==="confirmed"?(volumeConfirmed?"تأكيد بإغلاق الشمعة التالية مع فوليوم ≥ 1.1× المتوسط":"تأكيد بالإغلاق؛ الفوليوم أقل من 1.1× المتوسط"):"بانتظار التأكيد عند "+fmt(confirmation)+" ⏳ · يلزم إغلاق الشمعة التالية "+(found.kind==="bull"?"فوق المستوى":found.kind==="bear"?"تحت المستوى":"خارج نطاق الحيرة");
  return {...found,confirmation,status:finalStatus,score,detail,volumeConfirmed};
 }
