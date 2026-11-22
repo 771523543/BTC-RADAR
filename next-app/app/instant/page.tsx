@@ -92,8 +92,8 @@ function analyze(s:Data):Plan{
  const priceBelowSupport=support!==null&&entry<support,priceAboveResistance=resistance!==null&&entry>resistance;
  const supportSweep=support!==null&&last.low<support&&last.close>support&&last.close>last.open;
  const resistanceSweep=resistance!==null&&last.high>resistance&&last.close<resistance&&last.close<last.open;
- const supportEvidence=(!priceAboveResistance&&!priceBelowSupport&&(nearSupport||supportBounce))||supportSweep;
- const resistanceEvidence=(!priceBelowSupport&&!priceAboveResistance&&(nearResistance||resistanceRejection))||resistanceSweep;
+ const supportEvidence=!priceAboveResistance&&((!priceBelowSupport&&(nearSupport||supportBounce))||supportSweep);
+ const resistanceEvidence=!priceBelowSupport&&((!priceAboveResistance&&(nearResistance||resistanceRejection))||resistanceSweep);
  const priorWindow=c.slice(-21,-1),oldLow=priorWindow.length?Math.min(...priorWindow.map(x=>x.low)):last.low,oldHigh=priorWindow.length?Math.max(...priorWindow.map(x=>x.high)):last.high;
  const sweepLow=last.low<oldLow&&last.close>oldLow,sweepHigh=last.high>oldHigh&&last.close<oldHigh;
  const pat=pattern(c,{support,resistance,nearSupport:nearSupport&&!priceBelowSupport,nearResistance:nearResistance&&!priceAboveResistance,sweepLow:sweepLow||supportSweep,sweepHigh:sweepHigh||resistanceSweep,atr:a,volumeRatio:volRatio});
