@@ -66,7 +66,7 @@ function analyze(s:Data):Plan{
  const trendUp=(t:Trend4H)=>t.direction==="صاعد",trendDown=(t:Trend4H)=>t.direction==="هابط";
  const up=last.close>e20&&e20>e50,down=last.close<e20&&e20<e50;
  const fundBull=s.funding<-.00005,fundBear=s.funding>.00005;
- const rangePct=support!==null&&resistance!==null?Math.max(0,(resistance-support)/entry*100):Infinity,emaGapPct=e50>0?Math.abs(e20-e50)/entry*100:Infinity;
+ const emaGapPct=e50>0?Math.abs(e20-e50)/entry*100:Infinity;
  const tightRange=Number.isFinite(a)&&a>0&&support!==null&&resistance!==null&&(resistance-support)<=a*1.2;
  const chop=tightRange||emaGapPct<=.08,chopReason=tightRange?"النطاق محصور داخل 1.2× ATR14":"EMA20 وEMA50 متلاصقتان (≤ 0.08%)";
  const dead=!Number.isFinite(a)||a/entry*100<.08,lowLiquidity=volRatio<.7&&!sweepLow&&!sweepHigh;
@@ -75,10 +75,10 @@ function analyze(s:Data):Plan{
   let points=0;const parts:string[]=[];
   const h4=direction==="LONG"?trendUp(s.trend4h):trendDown(s.trend4h),h1=direction==="LONG"?trendUp(s.trend1h):trendDown(s.trend1h);
   const h4Against=direction==="LONG"?trendDown(s.trend4h):trendUp(s.trend4h),h1Against=direction==="LONG"?trendDown(s.trend1h):trendUp(s.trend1h);
-  if(h4){points+=18;parts.push("4H موافق +18");}else if(h4Against){points-=12;parts.push("4H معاكس −12");}else parts.push("4H محايد +0");
-  if(h1){points+=14;parts.push("1H موافق +14");}else if(h1Against){points-=10;parts.push("1H معاكس −10");}else parts.push("1H محايد +0");
+  if(h4){points+=20;parts.push("4H موافق +20");}else if(h4Against){points-=12;parts.push("4H معاكس −12");}else parts.push("4H محايد +0");
+  if(h1){points+=15;parts.push("1H موافق +15");}else if(h1Against){points-=10;parts.push("1H معاكس −10");}else parts.push("1H محايد +0");
   const bounce=direction==="LONG"?nearSupport:nearResistance,breakout=direction==="LONG"?breakoutConfirmed:breakdownConfirmed,sweep=direction==="LONG"?sweepLow:sweepHigh;
-  if(breakout){points+=22;parts.push("كسر/اختراق حقيقي مع هامش ATR +22");}
+  if(breakout){points+=25;parts.push("كسر/اختراق حقيقي مع هامش ATR +25");}
   else if(sweep){points+=17;parts.push("Liquidity Sweep واضح +17");}
   else if(bounce){points+=16;parts.push(direction==="LONG"?"ارتداد/تماسك دعم +16":"رفض/تماسك مقاومة +16");}
   else {points-=5;parts.push("لا تأكيد من مستوى فني −5");}
@@ -87,9 +87,9 @@ function analyze(s:Data):Plan{
   const candleDirection=direction==="LONG"?last.close>last.open:last.close<last.open;
   if(volRatio>=1.15&&candleDirection){points+=10;parts.push("حجم واتجاه شمعة مؤيدان +10");}else if(volRatio<.7){points-=10;parts.push("فوليوم ضعيف −10");}else if(volRatio>=1.15){points-=4;parts.push("حجم مرتفع دون اتجاه مؤيد −4");}
   const oiAligned=direction==="LONG"?oiBull:oiBear,oiOpposite=direction==="LONG"?oiBear:oiBull;
-  if(oiAligned){points+=7;parts.push("اتجاه Open Interest داعم +7");}else if(oiOpposite){points-=5;parts.push("اتجاه Open Interest تحذيري −5");}else parts.push("اتجاه OI غير حاسم +0");
+  if(oiAligned){points+=10;parts.push("اتجاه Open Interest داعم +10");}else if(oiOpposite){points-=5;parts.push("اتجاه Open Interest تحذيري −5");}else parts.push("اتجاه OI غير حاسم +0");
   const fundingAligned=direction==="LONG"?fundBull:fundBear,fundingOpposite=direction==="LONG"?fundBear:fundBull;
-  if(fundingAligned){points+=4;parts.push("Funding داعم +4");}else if(fundingOpposite){points-=4;parts.push("Funding مزدحم/معاكس −4");}else parts.push("Funding محايد +0");
+  if(fundingAligned){points+=5;parts.push("Funding داعم +5");}else if(fundingOpposite){points-=4;parts.push("Funding مزدحم/معاكس −4");}else parts.push("Funding محايد +0");
   if(pat.status==="confirmed"&&((direction==="LONG"&&pat.kind==="bull")||(direction==="SHORT"&&pat.kind==="bear"))){points+=5;parts.push("نموذج شموع مؤكد +5");}
   return{value:Math.round(clamp(points)),parts};
  };
@@ -97,7 +97,6 @@ function analyze(s:Data):Plan{
  const higher=Math.max(longScore,shortScore),gap=Math.abs(longScore-shortScore),candidate:Side=longScore>shortScore?"LONG":"SHORT";
  const blockers:string[]=[];if(higher<70)blockers.push("الدرجة الأعلى أقل من 70%");if(gap<25)blockers.push("الفارق بين LONG وSHORT أقل من 25 نقطة");if(lowLiquidity)blockers.push("ضعف سيولة حاد: الفوليوم أقل من 0.7× دون Sweep");if(chop)blockers.push("تذبذب ضيق محصور داخل هامش ATR");if(dead)blockers.push("ATR ضعيف جداً");if(!Number.isFinite(entry)||entry<=0||!Number.isFinite(a)||a<=0)blockers.push("بيانات السعر/ATR غير صالحة");
  const side:Side=blockers.length?"NO TRADE":candidate;
- const selectedReasons=candidate==="LONG"?ls.parts:ss.parts,otherScore=candidate==="LONG"?shortScore:longScore;
  const decisionDetails="LONG "+longScore+"% ["+ls.parts.join("، ")+"] · SHORT "+shortScore+"% ["+ss.parts.join("، ")+"]";
  const reason=side==="NO TRADE"?"NO TRADE — "+blockers[0]+(blockers.length>1?"؛ "+blockers.slice(1).join("؛ "):"")+" · "+decisionDetails:"إشارة "+side+" · "+selectedReasons.join("، ")+" · الدرجة "+higher+"% والفارق "+gap+" نقطة.";
  let sl=0,tp1=0,tp2=0,riskDistance=0;
