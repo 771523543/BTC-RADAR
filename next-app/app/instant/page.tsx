@@ -91,14 +91,16 @@ function analyze(s:Data):Plan{
   const fundingAligned=direction==="LONG"?fundBull:fundBear,fundingOpposite=direction==="LONG"?fundBear:fundBull;
   if(fundingAligned){points+=5;parts.push("Funding داعم +5");}else if(fundingOpposite){points-=4;parts.push("Funding مزدحم/معاكس −4");}else parts.push("Funding محايد +0");
   if(pat.status==="confirmed"&&((direction==="LONG"&&pat.kind==="bull")||(direction==="SHORT"&&pat.kind==="bear"))){points+=5;parts.push("نموذج شموع مؤكد +5");}
-  return{value:Math.round(clamp(points)),parts};
+  const totalPoints=points;
+  const finalScore=Math.round(Math.min(100,Math.max(0,totalPoints)));
+  return{value:finalScore,totalPoints,parts};
  };
  const ls=score("LONG"),ss=score("SHORT"),longScore=ls.value,shortScore=ss.value;
  const higher=Math.max(longScore,shortScore),gap=Math.abs(longScore-shortScore),candidate:Side=longScore>shortScore?"LONG":"SHORT";
  const blockers:string[]=[];if(higher<70)blockers.push("الدرجة الأعلى أقل من 70%");if(gap<25)blockers.push("الفارق بين LONG وSHORT أقل من 25 نقطة");if(lowLiquidity)blockers.push("ضعف سيولة حاد: الفوليوم أقل من 0.7× دون Sweep");if(chop)blockers.push("تذبذب ضيق محصور داخل هامش ATR");if(dead)blockers.push("ATR ضعيف جداً");if(!Number.isFinite(entry)||entry<=0||!Number.isFinite(a)||a<=0)blockers.push("بيانات السعر/ATR غير صالحة");
  const side:Side=blockers.length?"NO TRADE":candidate;
  const selectedReasons=candidate==="LONG"?ls.parts:ss.parts;
- const decisionDetails="LONG "+longScore+"% ["+ls.parts.join("، ")+"] · SHORT "+shortScore+"% ["+ss.parts.join("، ")+"]";
+ const decisionDetails="LONG "+longScore+"% (مجموع العوامل "+ls.totalPoints+" → النهائي "+longScore+"%) ["+ls.parts.join("، ")+"] · SHORT "+shortScore+"% (مجموع العوامل "+ss.totalPoints+" → النهائي "+shortScore+"%) ["+ss.parts.join("، ")+"]";
  const reason=side==="NO TRADE"?"NO TRADE — "+blockers[0]+(blockers.length>1?"؛ "+blockers.slice(1).join("؛ "):"")+" · "+decisionDetails:"إشارة "+side+" · "+selectedReasons.join("، ")+" · الدرجة "+higher+"% والفارق "+gap+" نقطة.";
  let sl=0,tp1=0,tp2=0,riskDistance=0;
  if(side!=="NO TRADE"){
