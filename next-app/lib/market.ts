@@ -181,3 +181,76 @@ export function calculateLevels(m5: Candle[], m15: Candle[], h1: Candle[], h4: C
     atr: baseAtr,
   };
 }
+
+export type BinanceLiveUpdate = {
+  price?: number;
+  kline?: { time: number; closeTime: number; open: number; high: number; low: number; close: number; volume: number; closed: boolean };
+  status: "live" | "reconnecting";
+};
+
+type LiveListener = (update: BinanceLiveUpdate) => void;
+const liveListeners = new Set<LiveListener>();
+let liveSocket: WebSocket | null = null;
+let liveReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let liveStatus: BinanceLiveUpdate["status"] = "reconnecting";
+
+function publishLive(update: BinanceLiveUpdate) {
+  liveStatus = update.status;
+  liveListeners.forEach(listener => listener(update));
+}
+
+function connectSharedBinanceLive() {
+  if (liveSocket || liveListeners.size === 0 || typeof WebSocket === "undefined") return;
+  const socket = new WebSocket("wss://fstream.binance.com/stream?streams=btcusdt@ticker/btcusdt@kline_15m");
+  liveSocket = socket;
+  socket.onopen = () => publishLive({ status: "live" });
+  socket.onmessage = event => {
+    try {
+      const packet = JSON.parse(String(event.data)) as { data?: Record<string, unknown> };
+      const data = packet.data ?? {};
+      if (data.e === "24hrTicker" && data.c !== undefined) {
+        const price = Number(data.c);
+        if (Number.isFinite(price) && price > 0) publishLive({ status: "live", price });
+      } else if (data.e === "kline" && data.k && typeof data.k === "object") {
+        const k = data.k as Record<string, unknown>;
+        const candle = {
+          time: Number(k.t), closeTime: Number(k.T), open: Number(k.o), high: Number(k.h),
+          low: Number(k.l), close: Number(k.c), volume: Number(k.v), closed: Boolean(k.x),
+        };
+        if ([candle.time, candle.closeTime, candle.open, candle.high, candle.low, candle.close, candle.volume].every(Number.isFinite)) {
+          publishLive({ status: "live", kline: candle });
+        }
+      }
+    } catch { /* Ignore malformed market packets; the REST fallback remains active. */ }
+  };
+  socket.onerror = () => publishLive({ status: "reconnecting" });
+  socket.onclose = () => {
+    if (liveSocket === socket) liveSocket = null;
+    publishLive({ status: "reconnecting" });
+    if (liveListeners.size && !liveReconnectTimer) {
+      liveReconnectTimer = setTimeout(() => {
+        liveReconnectTimer = null;
+        connectSharedBinanceLive();
+      }, 3000);
+    }
+  };
+}
+
+export function subscribeBinanceLive(listener: LiveListener) {
+  liveListeners.add(listener);
+  listener({ status: liveStatus });
+  connectSharedBinanceLive();
+  return () => {
+    liveListeners.delete(listener);
+    if (!liveListeners.size) {
+      if (liveReconnectTimer) clearTimeout(liveReconnectTimer);
+      liveReconnectTimer = null;
+      if (liveSocket) {
+        const socket = liveSocket;
+        liveSocket = null;
+        socket.onclose = null;
+        socket.close();
+      }
+    }
+  };
+}
