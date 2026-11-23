@@ -112,7 +112,7 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker):Plan{
  const resistanceOverrunPct=resistance!==null&&resistance>0?resistanceOverrun/resistance*100:0;
  const supportBreakConfirmed=breakdownConfirmed,resistanceBreakConfirmed=breakoutConfirmed;
  // Stateful post-break tracking: closed candles confirm the break; live price only marks an intrabar breach/retest.
- if(tracker.frame!==frame)Object.assign(tracker,{frame,level:null,type:null,status:null,remaining:0,lastCandleTime:0,detail:"",impactLong:0,impactShort:0});
+ if(tracker.frame!==frame)Object.assign(tracker,{frame,level:null,type:null,status:null,remaining:0,lastCandleTime:0,detail:"",impactLong:0,impactShort:0,breakVolumeRatio:undefined,testVolumeRatio:undefined});
  const previousClosed=c.length>1?c[c.length-2]:last;
  const liveCandle=s.chartCandles.length?s.chartCandles[s.chartCandles.length-1]:last;
  const buffer=Math.max(a*.15,entry*.0001);
@@ -130,7 +130,8 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker):Plan{
    const lvl=tracker.level,type=tracker.type;
    const closeBeyond=type==="BROKEN_SUPPORT"?closedBelow(lvl):closedAbove(lvl);
    const reclaimed=type==="BROKEN_SUPPORT"?closedAbove(lvl):closedBelow(lvl);
-   const candleTouched=last.low<=lvl+buffer&&last.high>=lvl-buffer;\n   if(candleTouched)tracker.testVolumeRatio=volRatio;
+   const candleTouched=last.low<=lvl+buffer&&last.high>=lvl-buffer;
+   if(candleTouched)tracker.testVolumeRatio=volRatio;
    if(tracker.status==="instant"){
     if(closeBeyond){
      tracker.status="confirmed";tracker.remaining=Math.max(1,tracker.remaining);
@@ -215,7 +216,8 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker):Plan{
  const liveTouchesReference=postBreakActive&&liveCandle.low<=tracker.level!+proximityBand&&liveCandle.high>=tracker.level!-proximityBand;
  const closedTouchesReference=postBreakActive&&last.low<=tracker.level!+proximityBand&&last.high>=tracker.level!-proximityBand;
  const postBreakElapsed=postBreakActive?Math.max(0,12-tracker.remaining):0,postBreakWindow=12;
- const postBreakVolumeRatio=postBreakActive?volRatio:0;\n const postBreakBreakoutVolumeRatio=postBreakActive&&Number.isFinite(tracker.breakVolumeRatio)?tracker.breakVolumeRatio!:null;\n const postBreakTestVolumeRatio=postBreakActive&&Number.isFinite(tracker.testVolumeRatio)?tracker.testVolumeRatio!:null;
+ const postBreakVolumeRatio=postBreakActive?volRatio:0;
+ const postBreakBreakoutVolumeRatio=postBreakActive&&Number.isFinite(tracker.breakVolumeRatio)?tracker.breakVolumeRatio!:null;\n const postBreakTestVolumeRatio=postBreakActive&&Number.isFinite(tracker.testVolumeRatio)?tracker.testVolumeRatio!:null;
  const wickRatio=(z:C,side:"upper"|"lower")=>{const range=Math.max(z.high-z.low,1e-12),wick=side==="upper"?z.high-Math.max(z.open,z.close):Math.min(z.open,z.close)-z.low;return wick/range;};
  const rejectionWick=postBreakActive?(tracker.type==="BROKEN_RESISTANCE"?wickRatio(liveCandle,"upper"):wickRatio(liveCandle,"lower")):0;
  const postBreakWick=postBreakActive?(rejectionWick>=.45?"ذيل رفض كبير ≥45% من نطاق الشمعة الحية":closedTouchesReference&&(tracker.type==="BROKEN_RESISTANCE"?wickRatio(last,"upper"):wickRatio(last,"lower"))>=.45?"ذيل رفض كبير ≥45% من نطاق آخر شمعة مغلقة":"لا يوجد ذيل رفض كبير مرصود"):"غير متاح";
