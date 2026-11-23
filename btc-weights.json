@@ -1,0 +1,200 @@
+{
+  "model": "LightGBM(400) + CatBoost(400), chronological walk-forward 80/20",
+  "symbol": "BTCUSDT",
+  "timeframe": "15m",
+  "weights": {
+    "atr_pct": 0.25902291,
+    "dist_ema_200": 0.08619839,
+    "vol_ratio": 0.07495519,
+    "macd_hist": 0.07177197,
+    "macd": 0.06685331,
+    "ret_1": 0.05805521,
+    "ret_10": 0.05692262,
+    "bb_pos": 0.05243054,
+    "ret_20": 0.05137083,
+    "ret_5": 0.05024982,
+    "dist_ema_50": 0.04396523,
+    "rsi_14": 0.03752988,
+    "dist_ema_20": 0.03544934,
+    "is_london": 0.02414612,
+    "is_ny": 0.0239365,
+    "is_asia": 0.00714214
+  },
+  "rules_top20": [
+    {
+      "feature": "atr_pct",
+      "weight": 0.25902291,
+      "lgbm_importance": 0.1145,
+      "catboost_importance": 0.40354581
+    },
+    {
+      "feature": "dist_ema_200",
+      "weight": 0.08619839,
+      "lgbm_importance": 0.10591667,
+      "catboost_importance": 0.0664801
+    },
+    {
+      "feature": "vol_ratio",
+      "weight": 0.07495519,
+      "lgbm_importance": 0.08666667,
+      "catboost_importance": 0.06324372
+    },
+    {
+      "feature": "macd_hist",
+      "weight": 0.07177197,
+      "lgbm_importance": 0.09,
+      "catboost_importance": 0.05354394
+    },
+    {
+      "feature": "macd",
+      "weight": 0.06685331,
+      "lgbm_importance": 0.082,
+      "catboost_importance": 0.05170662
+    },
+    {
+      "feature": "ret_1",
+      "weight": 0.05805521,
+      "lgbm_importance": 0.07075,
+      "catboost_importance": 0.04536042
+    },
+    {
+      "feature": "ret_10",
+      "weight": 0.05692262,
+      "lgbm_importance": 0.07166667,
+      "catboost_importance": 0.04217857
+    },
+    {
+      "feature": "bb_pos",
+      "weight": 0.05243054,
+      "lgbm_importance": 0.06308333,
+      "catboost_importance": 0.04177775
+    },
+    {
+      "feature": "ret_20",
+      "weight": 0.05137083,
+      "lgbm_importance": 0.07008333,
+      "catboost_importance": 0.03265832
+    },
+    {
+      "feature": "ret_5",
+      "weight": 0.05024982,
+      "lgbm_importance": 0.06708333,
+      "catboost_importance": 0.0334163
+    },
+    {
+      "feature": "dist_ema_50",
+      "weight": 0.04396523,
+      "lgbm_importance": 0.04975,
+      "catboost_importance": 0.03818046
+    },
+    {
+      "feature": "rsi_14",
+      "weight": 0.03752988,
+      "lgbm_importance": 0.04825,
+      "catboost_importance": 0.02680977
+    },
+    {
+      "feature": "dist_ema_20",
+      "weight": 0.03544934,
+      "lgbm_importance": 0.04483333,
+      "catboost_importance": 0.02606534
+    },
+    {
+      "feature": "is_london",
+      "weight": 0.02414612,
+      "lgbm_importance": 0.01408333,
+      "catboost_importance": 0.03420891
+    },
+    {
+      "feature": "is_ny",
+      "weight": 0.0239365,
+      "lgbm_importance": 0.01425,
+      "catboost_importance": 0.03362299
+    },
+    {
+      "feature": "is_asia",
+      "weight": 0.00714214,
+      "lgbm_importance": 0.00708333,
+      "catboost_importance": 0.00720095
+    }
+  ],
+  "feature_stats": {
+    "atr_pct": {
+      "mean": 0.00311483,
+      "std": 0.00172209
+    },
+    "dist_ema_200": {
+      "mean": -0.00088198,
+      "std": 0.01597619
+    },
+    "vol_ratio": {
+      "mean": 1.03862343,
+      "std": 0.8050896
+    },
+    "macd_hist": {
+      "mean": -0.01124125,
+      "std": 73.774796
+    },
+    "macd": {
+      "mean": -4.87108814,
+      "std": 245.92295034
+    },
+    "ret_1": {
+      "mean": -6.06e-06,
+      "std": 0.00248661
+    },
+    "ret_10": {
+      "mean": -6.255e-05,
+      "std": 0.0076513
+    },
+    "bb_pos": {
+      "mean": 0.50171903,
+      "std": 0.3311408
+    },
+    "ret_20": {
+      "mean": -0.00012434,
+      "std": 0.01079818
+    },
+    "ret_5": {
+      "mean": -3.093e-05,
+      "std": 0.00544081
+    },
+    "dist_ema_50": {
+      "mean": -0.00022293,
+      "std": 0.0082581
+    },
+    "rsi_14": {
+      "mean": 50.03295839,
+      "std": 11.25157346
+    },
+    "dist_ema_20": {
+      "mean": -8.818e-05,
+      "std": 0.00512808
+    },
+    "is_london": {
+      "mean": 0.37513382,
+      "std": 0.48415745
+    },
+    "is_ny": {
+      "mean": 0.37490186,
+      "std": 0.48409757
+    },
+    "is_asia": {
+      "mean": 0.37513382,
+      "std": 0.48415745
+    }
+  },
+  "threshold": 0.7,
+  "training_metrics": {
+    "candles_downloaded": 70079,
+    "usable_rows": 70056,
+    "train_rows": 56044,
+    "test_rows": 14012,
+    "confidence_threshold": 0.7,
+    "trades_above_threshold": 13382,
+    "accuracy_above_threshold": 0.8923180391570766,
+    "accuracy_percent_above_threshold": 89.2318,
+    "label": "close in 3 candles >= current close * 1.003",
+    "trained_at_utc": "2026-11-23T18:44:18.728991+00:00"
+  }
+}
