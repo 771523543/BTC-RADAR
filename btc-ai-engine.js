@@ -67,7 +67,7 @@ function buildFeatures(candles){
     ema20:e20,ema50:e50,ema200:e200,
     bollinger:{upper:bbMid+2*bbStd,middle:bbMid,lower:bbMid-2*bbStd,width:bbMid?(4*bbStd/bbMid):null},
     atr14:atr(c,14),volumeRatio:avgVol?last.volume/avgVol:null,
-    returns:{ret5:ret(5),ret10:ret(10),ret20:ret(20)},
+    returns:{ret1:ret(1),ret5:ret(5),ret10:ret(10),ret20:ret(20)},
     session,candleTime:last.time, candleCount:c.length,
     trend:{aboveEma20:last.close>e20,aboveEma50:last.close>e50,aboveEma200:last.close>e200},
     candle:{body:last.close-last.open,range:last.high-last.low,previousClose:prev.close}
