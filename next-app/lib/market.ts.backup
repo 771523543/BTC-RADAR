@@ -1,0 +1,176 @@
+export type Market = "spot" | "futures";
+export type Interval = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
+export type Candle = { time: number; closeTime: number; open: number; high: number; low: number; close: number; volume: number };
+export type Level = { price: number; side: "support" | "resistance"; touches: number; timeframes: string[]; strength: string; flipped: boolean; score: number };
+
+const hosts = (market: Market) => market === "futures"
+  ? ["https://fapi.binance.com", "https://fapi1.binance.com", "https://fapi2.binance.com", "https://fapi3.binance.com"]
+  : ["https://data-api.binance.vision", "https://api.binance.com", "https://api1.binance.com", "https://api2.binance.com", "https://api3.binance.com", "https://api4.binance.com"];
+
+export async function binance<T>(market: Market, path: string): Promise<T> {
+  let last: unknown;
+  for (const host of hosts(market)) {
+    try {
+      const response = await fetch(host + path, { cache: "no-store" });
+      if (!response.ok) throw new Error(host + " HTTP " + response.status);
+      return await response.json() as T;
+    } catch (error) { last = error; }
+  }
+  throw last instanceof Error ? last : new Error("تعذر الاتصال بواجهات Binance");
+}
+
+export function parseCandles(rows: unknown[][]): Candle[] {
+  return rows.map((r) => ({ time: Number(r[0]), closeTime: Number(r[6]), open: Number(r[1]), high: Number(r[2]), low: Number(r[3]), close: Number(r[4]), volume: Number(r[5]) }));
+}
+export function ema(values: number[], period: number): number[] {
+  if (values.length < period) return [];
+  const k = 2 / (period + 1);
+  let previous = values.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  const result = Array(period - 1).fill(0);
+  result.push(previous);
+  for (let i = period; i < values.length; i++) { previous = values[i] * k + previous * (1 - k); result.push(previous); }
+  return result;
+}
+export function rsi(values: number[], period = 14): number | null {
+  if (values.length <= period) return null;
+  let gain = 0, loss = 0;
+  for (let i = 1; i <= period; i++) { const d = values[i] - values[i - 1]; if (d > 0) gain += d; else loss -= d; }
+  let avgGain = gain / period, avgLoss = loss / period;
+  for (let i = period + 1; i < values.length; i++) { const d = values[i] - values[i - 1]; avgGain = (avgGain * (period - 1) + Math.max(d, 0)) / period; avgLoss = (avgLoss * (period - 1) + Math.max(-d, 0)) / period; }
+  if (avgGain === 0 && avgLoss === 0) return 50;
+  return avgLoss === 0 ? 100 : 100 - 100 / (1 + avgGain / avgLoss);
+}
+export function atr(candles: Candle[], period = 14): number {
+  const recent = candles.slice(-period);
+  if (!recent.length) return 0;
+  return recent.reduce((sum, c, i) => { const prev = i ? recent[i - 1].close : c.open; return sum + Math.max(c.high - c.low, Math.abs(c.high - prev), Math.abs(c.low - prev)); }, 0) / recent.length;
+}
+function frameLevels(candles: Candle[], frame: string, tolerance: number): Level[] {
+  const c = candles
+    .filter(x => Number.isFinite(x.open) && Number.isFinite(x.high) && Number.isFinite(x.low) && Number.isFinite(x.close) && x.closeTime < Date.now())
+    .slice(-240);
+  if (c.length < 25) return [];
+
+  // Confirm pivots only after two candles have formed on both sides.
+  const pivots: { price: number; side: "support" | "resistance"; index: number; time: number }[] = [];
+  for (let i = 2; i < c.length - 2; i++) {
+    const w = c.slice(i - 2, i + 3);
+    const highs = w.map(x => x.high), lows = w.map(x => x.low);
+    if (c[i].high === Math.max(...highs) && highs.filter(x => x === c[i].high).length === 1) {
+      pivots.push({ price: c[i].high, side: "resistance", index: i, time: c[i].time });
+    }
+    if (c[i].low === Math.min(...lows) && lows.filter(x => x === c[i].low).length === 1) {
+      pivots.push({ price: c[i].low, side: "support", index: i, time: c[i].time });
+    }
+  }
+
+  // Cluster around a stable weighted centre instead of allowing sequential
+  // matches to drift a zone away from the actual swing prices.
+  const clusters: { side: "support" | "resistance"; prices: number[]; indexes: number[]; times: string[] }[] = [];
+  for (const pivot of pivots) {
+    let best: typeof clusters[number] | undefined;
+    let bestDistance = Infinity;
+    for (const group of clusters) {
+      if (group.side !== pivot.side) continue;
+      const centre = group.prices.reduce((sum, value) => sum + value, 0) / group.prices.length;
+      const distance = Math.abs(centre - pivot.price);
+      if (distance <= tolerance && distance < bestDistance) { best = group; bestDistance = distance; }
+    }
+    if (!best) clusters.push({ side: pivot.side, prices: [pivot.price], indexes: [pivot.index], times: [frame] });
+    else { best.prices.push(pivot.price); best.indexes.push(pivot.index); }
+  }
+
+  const result: Level[] = [];
+  for (const group of clusters) {
+    // Anchor each level to an observed pivot price, not a synthetic average.
+    const orderedPrices = [...group.prices].sort((a, b) => a - b);
+    const centre = orderedPrices[Math.floor(orderedPrices.length / 2)];
+    const interactions: number[] = [];
+    let lastInteraction = -10;
+    for (let i = 0; i < c.length; i++) {
+      if (c[i].high >= centre - tolerance * 0.45 && c[i].low <= centre + tolerance * 0.45 && i - lastInteraction > 2) {
+        interactions.push(i);
+        lastInteraction = i;
+      }
+    }
+
+    // A touch is more meaningful when price rejects the zone afterwards.
+    const rangeAtr = atr(c.slice(Math.max(0, c.length - 30)));
+    let reactions = 0;
+    for (const index of interactions) {
+      const later = c.slice(index + 1, Math.min(c.length, index + 4));
+      const rejected = later.some(bar => group.side === "support"
+        ? bar.close >= centre + rangeAtr * 0.35
+        : bar.close <= centre - rangeAtr * 0.35);
+      if (rejected) reactions++;
+    }
+    // Count confirmed swing pivots and rejected retests, not every candle that merely crossed the zone.
+    const touchCount = Math.max(group.indexes.length, reactions);
+    const recency = group.indexes.length
+      ? Math.max(...group.indexes) / Math.max(1, c.length - 1)
+      : 0;
+    const score = touchCount + reactions * 0.75 + recency;
+    result.push({
+      price: centre,
+      side: group.side,
+      touches: touchCount,
+      timeframes: [frame],
+      strength: score >= 10 ? "قوية" : score >= 5 ? "متوسطة" : "مراقبة",
+      score,
+      flipped: false,
+    });
+  }
+  return result;
+}
+export function calculateLevels(m5: Candle[], m15: Candle[], h1: Candle[], h4: Candle[], price: number) {
+  const closed = (items: Candle[]) => items.filter(x => x.closeTime < Date.now()).slice(-240);
+  const baseAtr = atr(closed(m15));
+  // Use a separate volatility tolerance for each timeframe, then require a
+  // tighter price match before calling pivots the same shared level.
+  const toleranceFor = (items: Candle[], floorPct: number) => Math.max(atr(closed(items)) * 0.35, price > 0 ? price * floorPct : 0);
+  const t5 = toleranceFor(m5, 0.00012);
+  const t15 = toleranceFor(m15, 0.00016);
+  const t1h = toleranceFor(h1, 0.00022);
+  const t4h = toleranceFor(h4, 0.0003);
+  const all = [
+    ...frameLevels(m5, "5m", t5),
+    ...frameLevels(m15, "15m", t15),
+    ...frameLevels(h1, "1h", t1h),
+    ...frameLevels(h4, "4h", t4h),
+  ].sort((a, b) => a.price - b.price);
+
+  // Confluence is counted only when independently detected candle pivots
+  // agree closely. Keep the representative price equal to a real pivot.
+  const mergeTolerance = Math.max(price > 0 ? price * 0.00015 : 0, Math.min(t5, t15, t1h, t4h) * 0.75);
+  const framePriority = (level: Level) => level.timeframes.includes("4h") ? 4 : level.timeframes.includes("1h") ? 3 : level.timeframes.includes("15m") ? 2 : 1;
+  const merged: Level[] = [];
+  for (const item of all) {
+    const found = merged.find(x => x.side === item.side && Math.abs(x.price - item.price) <= mergeTolerance);
+    if (!found) merged.push({ ...item });
+    else {
+      const existingPriority = framePriority(found);
+      const incomingPriority = framePriority(item);
+      if (incomingPriority > existingPriority || (incomingPriority === existingPriority && item.score > found.score)) {
+        found.price = item.price;
+      }
+      found.touches += item.touches;
+      found.score += item.score;
+      if (!found.timeframes.includes(item.timeframes[0])) found.timeframes.push(item.timeframes[0]);
+    }
+  }
+  merged.forEach(x => {
+    const frameBonus = x.timeframes.length >= 3 ? 2 : x.timeframes.length === 2 ? 1 : 0;
+    const score = x.score + frameBonus;
+    x.score = score;
+    x.strength = score >= 12 ? "قوية" : score >= 6 ? "متوسطة" : "مراقبة";
+    x.flipped = (x.side === "support" && x.price > price) || (x.side === "resistance" && x.price < price);
+  });
+  return {
+    all: merged,
+    // Show the nearest zones on each side of the live price, while preserving
+    // each pivot's original identity for breakout/breakdown event detection.
+    resistance: merged.filter(x => x.price > price).map(x => ({ ...x, flipped: x.side === "support" })).sort((a, b) => a.price - b.price).slice(0, 5),
+    support: merged.filter(x => x.price < price).map(x => ({ ...x, flipped: x.side === "resistance" })).sort((a, b) => b.price - a.price).slice(0, 5),
+    atr: baseAtr,
+  };
+}
