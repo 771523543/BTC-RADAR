@@ -217,7 +217,8 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker):Plan{
  const closedTouchesReference=postBreakActive&&last.low<=tracker.level!+proximityBand&&last.high>=tracker.level!-proximityBand;
  const postBreakElapsed=postBreakActive?Math.max(0,12-tracker.remaining):0,postBreakWindow=12;
  const postBreakVolumeRatio=postBreakActive?volRatio:0;
- const postBreakBreakoutVolumeRatio=postBreakActive&&Number.isFinite(tracker.breakVolumeRatio)?tracker.breakVolumeRatio!:null;\n const postBreakTestVolumeRatio=postBreakActive&&Number.isFinite(tracker.testVolumeRatio)?tracker.testVolumeRatio!:null;
+ const postBreakBreakoutVolumeRatio=postBreakActive&&Number.isFinite(tracker.breakVolumeRatio)?tracker.breakVolumeRatio!:null;
+ const postBreakTestVolumeRatio=postBreakActive&&Number.isFinite(tracker.testVolumeRatio)?tracker.testVolumeRatio!:null;
  const wickRatio=(z:C,side:"upper"|"lower")=>{const range=Math.max(z.high-z.low,1e-12),wick=side==="upper"?z.high-Math.max(z.open,z.close):Math.min(z.open,z.close)-z.low;return wick/range;};
  const rejectionWick=postBreakActive?(tracker.type==="BROKEN_RESISTANCE"?wickRatio(liveCandle,"upper"):wickRatio(liveCandle,"lower")):0;
  const postBreakWick=postBreakActive?(rejectionWick>=.45?"ذيل رفض كبير ≥45% من نطاق الشمعة الحية":closedTouchesReference&&(tracker.type==="BROKEN_RESISTANCE"?wickRatio(last,"upper"):wickRatio(last,"lower"))>=.45?"ذيل رفض كبير ≥45% من نطاق آخر شمعة مغلقة":"لا يوجد ذيل رفض كبير مرصود"):"غير متاح";
