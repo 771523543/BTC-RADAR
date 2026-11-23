@@ -327,7 +327,7 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker):Plan{
  const fundingFlowScore=!Number.isFinite(s.funding)?5:(signalDirection==="LONG"?s.funding<-.00005:s.funding>.00005)?10:(signalDirection==="LONG"?s.funding>.00005:s.funding<-.00005)?0:5;
  const breakSupportsDirection=tracker.type===null?false:(signalDirection==="LONG"?tracker.type==="BROKEN_RESISTANCE":tracker.type==="BROKEN_SUPPORT");
  const breakWarnsDirection=tracker.status==="reclaimed"||tracker.status==="expired"||(tracker.type!==null&&!breakSupportsDirection);
- const breakFlowScore=tracker.status==="retest-confirmed"||tracker.status==="retest-bounce"||tracker.status==="retest-rejection"?Math.min(25,Math.max(0,postBreakQuality*.25)):tracker.status==="confirmed"&&breakSupportsDirection?Math.min(18,Math.max(0,postBreakQuality*.18)):tracker.status==="instant"||tracker.status==="retest"?Math.min(10,Math.max(0,postBreakQuality*.1)):tracker.status==="none"||!tracker.status?12:breakWarnsDirection?0:8;
+ const breakFlowScore=tracker.status==="retest-confirmed"||tracker.status==="retest-bounce"||tracker.status==="retest-rejection"?Math.min(25,Math.max(0,postBreakQuality*.25)):tracker.status==="confirmed"&&breakSupportsDirection?Math.min(18,Math.max(0,postBreakQuality*.18)):tracker.status==="instant"||tracker.status==="retest"?Math.min(10,Math.max(0,postBreakQuality*.1)):!tracker.status?12:breakWarnsDirection?0:8;
  const flowBreakScore=clampPct(volumeFlowScore+oiFlowScore+fundingFlowScore+breakFlowScore);
  const candidateLevel=signalDirection==="LONG"?resistance:support;
  const candidateRiskDistance=Math.max(Math.abs(entry-(signalDirection==="LONG"?support??entry:resistance??entry))+a*.25,1.2*a);
