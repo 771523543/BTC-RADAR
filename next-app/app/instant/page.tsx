@@ -354,8 +354,22 @@ useEffect(()=>{
   const averageRange=data.candles.slice(-21,-1).reduce((sum,x)=>sum+Math.max(0,x.high-x.low),0)/Math.max(1,data.candles.slice(-21,-1).length);
   const candleRange=Math.max(0,candle.high-candle.low);
   const relativeRange=averageRange>0?candleRange/averageRange:0;
+  // Attach a compact four-candle snapshot to each candle-close event report.
+  const closedThree=data.candles.slice(-3);
+  const liveNow=data.chartCandles.find(x=>x.time>candle.time)??null;
+  const candleLabel=(x:C)=>x.close>x.open?"صاعدة":x.close<x.open?"هابطة":"حيرة";
+  const candleLine=(x:C,label:string)=>{
+   const range=Math.max(0,x.high-x.low),baseIndex=data.candles.findIndex(z=>z.time===x.time);
+   const base=avg(data.candles.slice(Math.max(0,baseIndex-20),baseIndex).map(z=>z.volume).filter(Number.isFinite));
+   const vr=base>0&&Number.isFinite(x.volume)?fmt(x.volume/base,2)+"× متوسط 20 شمعة":"غير متاح";
+   return label+" "+candleLabel(x)+" | O "+fmt(x.open)+" · H "+fmt(x.high)+" · L "+fmt(x.low)+" · C "+fmt(x.close)+" · المدى "+fmt(range)+" USDT · الفوليوم "+vr;
+  };
+  const fourCandleReport=[...closedThree.map((x,i)=>candleLine(x,["C-3","C-2","C-1"][i])),liveNow?"C0 الحالية (حية/غير مغلقة) | O "+fmt(liveNow.open)+" · H "+fmt(liveNow.high)+" · L "+fmt(liveNow.low)+" · السعر الحالي "+fmt(data.price)+" · المدى حتى الآن "+fmt(Math.max(0,liveNow.high-liveNow.low))+" USDT · الفوليوم الجزئي "+(Number.isFinite(liveNow.volume)?fmt(liveNow.volume,3):"غير متاح")+" (لا يُقارن كحجم نهائي)":"C0 الحالية: غير متاحة في بيانات الشموع الحالية"].join(" || ");
+  const contextThree=closedThree.length===3&&closedThree[0].close<closedThree[1].close&&closedThree[1].close<closedThree[2].close?"السياق المغلق: دفع صاعد متدرج":closedThree.length===3&&closedThree[0].close>closedThree[1].close&&closedThree[1].close>closedThree[2].close?"السياق المغلق: دفع هابط متدرج":"السياق المغلق: تداخل/تذبذب أو حركة غير متسلسلة";
   const patternState=plan.patternType==="حيرة"?"النموذج السابق "+plan.patternAr+" حيرة/تردد، ولا يمنح اتجاهاً مستقلاً":plan.confirmationStatus==="confirmed"?"النموذج السابق "+plan.patternAr+" مؤكد وفق شمعة التأكيد الأخيرة":plan.confirmationStatus==="weak"?"النموذج السابق "+plan.patternAr+" ضعيف السياق ولا يُعد إشارة اتجاهية":plan.confirmationStatus==="failed"?"النموذج السابق "+plan.patternAr+" فشل":plan.pattern?"النموذج السابق "+plan.patternAr+" بانتظار التأكيد":"لا يوجد نموذج سابق مكتمل";
+  reasons.push("لقطة الشموع الأربع: "+fourCandleReport+". "+contextThree+". C0 متابعة حية فقط وليست إغلاقاً مؤكداً. ");
   reasons.push("أُغلقت شمعة مكتملة جديدة على "+frame+". الشمعة الأخيرة "+candleDirection+" (فتح "+fmt(candle.open)+"، إغلاق "+fmt(candle.close)+"). اتجاه 4H: "+plan.overallTrend+" و1H: "+plan.trend1h+". موقع السعر: "+plan.priceLocation+". الفوليوم "+fmt(volumeRatio,2)+"× متوسط 20 شمعة. "+(plan.rangeSqueeze?"النطاق منضغط (Squeeze).":plan.rangeExpansion?"النطاق يتوسع مع نشاط ملحوظ.":"لا يوجد انضغاط/توسع استثنائي.")+" مسافة EMA20: "+fmt(plan.emaDistanceAtr,2)+" ATR.");
+  interpretations.push("تسلسل الشموع المغلقة الثلاث: "+contextThree+". الشمعة الحالية C0 تُعرض بقيمها اللحظية، ولا يُستنتج منها كسر/اختراق مؤكد قبل إغلاقها.");
   interpretations.push("حجم مدى الشمعة "+fmt(relativeRange,2)+"× متوسط مدى 20 شمعة. "+patternState+". ملاحظة: اتجاه الشمعة المغلقة يوصف مستقلاً عن نموذج الشمعة؛ إذا كان النموذج السابق حيرة فلا يعني ذلك أن الشمعة الجديدة نفسها حيرة أو أنها تؤيد النموذج السابق. "+(volumeRatio>=1.15?"الفوليوم أعلى من المتوسط ويدعم الحركة نسبياً.":volumeRatio<.7?"الفوليوم ضعيف؛ الحركة أقل موثوقية.":"الفوليوم قريب من المتوسط؛ لا يعطي تأكيداً قوياً بمفرده."));
   figures.push("الإغلاق: "+fmt(candle.close)+" USDT · اتجاه الشمعة: "+candleDirection+" · مدى الشمعة: "+fmt(relativeRange,2)+"× متوسط المدى · النموذج: "+(plan.patternAr||"لا يوجد")+" ("+plan.confirmationStatus+") · الفوليوم النسبي: "+fmt(volumeRatio,2)+"× · الدعم: "+(dist(plan.support)===null?"—":fmt(dist(plan.support)!))+" USDT · المقاومة: "+(dist(plan.resistance)===null?"—":fmt(dist(plan.resistance)!))+" USDT · حالة الإشارة: "+plan.side+" — "+plan.reason);
   followUps.push("راقب إغلاق الشمعة التالية بالنسبة للمستويات؛ لا تعتمد على حركة داخل الشمعة وحدها. "+(plan.confirmationStatus==="pending"?plan.confirmationDetail:""));
