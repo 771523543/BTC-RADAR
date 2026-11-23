@@ -464,6 +464,8 @@ useEffect(()=>{
   "النموذج: "+plan.patternAr+" · النوع "+plan.patternType+" · الحالة "+plan.confirmationStatus+" · مستوى التأكيد "+fmt(plan.confirmation)+" · "+plan.confirmationDetail,
   "القرار: "+plan.side+" · LONG "+fmt(plan.longScore,0)+"% (RAW "+fmt(plan.longRaw,0)+") · SHORT "+fmt(plan.shortScore,0)+"% (RAW "+fmt(plan.shortRaw,0)+") · الفارق "+fmt(Math.abs(plan.longScore-plan.shortScore),0)+" نقطة · "+plan.reason,
   "حالة السوق: "+(plan.chop?"عرضي: "+plan.chopReason:"ليس عرضياً حسب مرشح النطاق")+(plan.counterTrend?" · الإشارة عكس اتجاه 4H":" · لا تعارض مع اتجاه 4H")+(plan.riskWarning?" · تحذير المخاطر: "+plan.riskWarning:""),
+  "خطة الصفقة: ENTRY "+fmt(plan.entry)+" · SL "+fmt(plan.sl)+" · TP1 "+fmt(plan.tp1)+" · TP2 "+fmt(plan.tp2)+" · مسافة المخاطرة "+fmt(plan.riskDistance,4)+" USDT",
+  "نسبة Long/Short للحسابات: غير متاحة في مصدر البيانات الحالي؛ لا يتم اختلاقها أو استنتاجها من Funding أو Open Interest",
   "POST-BREAK: "+(plan.postBreakType??"لا يوجد نوع نشط")+" · "+plan.postBreakStatus+" · المستوى "+(plan.postBreakLevel===null?"—":fmt(plan.postBreakLevel))+" · المتبقي "+plan.postBreakRemaining+" شمعة · "+plan.postBreakDetail
  ];
  const scoreReasons="عوامل LONG: "+(plan.longReasons.length?plan.longReasons.join("؛ "):"لا توجد عوامل مسجلة")+"\nعوامل SHORT: "+(plan.shortReasons.length?plan.shortReasons.join("؛ "):"لا توجد عوامل مسجلة");
