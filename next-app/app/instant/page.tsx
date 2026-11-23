@@ -445,9 +445,38 @@ useEffect(()=>{
  const title=events.map(x=>eventNames[x]).join(" + ");
  const timestamp=Date.now();
  const price=Number.isFinite(data.price)?data.price:candle.close;
- const fullText="BTC RADAR · تقرير حدث شامل\nالحدث: "+title+" ["+events.join(", ")+"]\nالوقت: "+new Date(timestamp).toLocaleString("ar")+" · الفريم: "+frame+" · السعر: "+fmt(price)+" USDT\n\nالتعليل والسبب:\n"+reasons.join("\n")+"\n\nالتفسير والأثر:\n"+interpretations.join("\n")+"\n\nالأرقام:\n"+figures.join("\n")+"\n\nخطة المتابعة:\n"+followUps.join("\n");
+ // Build the same point-in-time snapshot for every event, including break/retest-only reports.
+ const reportClosed=data.candles.slice(-3);
+ const reportLive=data.chartCandles.find(x=>x.time>candle.time)??null;
+ const reportCandleText=reportClosed.map((x,i)=>{
+  const index=data.candles.findIndex(z=>z.time===x.time);
+  const base=avg(data.candles.slice(Math.max(0,index-20),index).map(z=>z.volume).filter(Number.isFinite));
+  return ["C-3","C-2","C-1"][Math.max(0,3-reportClosed.length)+i]+" "+(x.close>x.open?"صاعدة":x.close<x.open?"هابطة":"محايدة")+" · O "+fmt(x.open)+" · H "+fmt(x.high)+" · L "+fmt(x.low)+" · C "+fmt(x.close)+" · Volume "+fmt(x.volume,3)+" · Volume/20 "+(base>0?fmt(x.volume/base,2)+"×":"—");
+ }).join("\n");
+ const reportLiveText=reportLive?"C0 حية وغير مغلقة · O "+fmt(reportLive.open)+" · H "+fmt(reportLive.high)+" · L "+fmt(reportLive.low)+" · السعر "+fmt(price)+" · Volume جزئي "+fmt(reportLive.volume,3):"C0 الحية: غير متاحة";
+ const marketSnapshot=[
+  "السعر الفوري: "+fmt(price)+" USDT · Mark Price: "+fmt(data.mark)+" USDT · الفريم: "+frame,
+  "الاتجاه الأعلى: 4H "+plan.overallTrend+" (EMA20 "+fmt(data.trend4h.ema20)+" / EMA50 "+fmt(data.trend4h.ema50)+") · 1H "+plan.trend1h+" (EMA20 "+fmt(data.trend1h.ema20)+" / EMA50 "+fmt(data.trend1h.ema50)+")",
+  "المستويات: الدعم الأقرب "+(plan.support===null?"—":fmt(plan.support)+" USDT · مسافة "+fmt(plan.supportDistance??NaN,3)+"%")+" · المقاومة الأقرب "+(plan.resistance===null?"—":fmt(plan.resistance)+" USDT · مسافة "+fmt(plan.resistanceDistance??NaN,3)+"%")+" · موقع السعر: "+plan.priceLocation+" · "+plan.levelDetail,
+  "المؤشرات: RSI14 "+fmt(plan.rsi,2)+" · EMA20 "+fmt(plan.ema20)+" · EMA50 "+fmt(plan.ema50)+" · ATR14 "+fmt(plan.atr,4)+" · بُعد EMA20 "+fmt(plan.emaDistanceAtr,2)+" ATR",
+  "الحركة والسيولة: "+plan.volumeText+" · "+plan.sweepText+" · "+(plan.rangeSqueeze?"انضغاط نطاق":plan.rangeExpansion?"اتساع نطاق":"لا انضغاط/اتساع استثنائي")+" · "+(plan.lowLiquidity?"سيولة منخفضة":"لا يوجد تحذير سيولة منخفضة"),
+  "المشتقات: Funding "+fmt(data.funding*100,5)+"% · "+plan.fundingText+" · Open Interest "+fmt(data.oi,3)+" BTC · تغير OI "+(data.oiDelta===null?"غير متاح":fmt(data.oiDelta,3)+" BTC")+" · "+plan.oiText,
+  "النموذج: "+plan.patternAr+" · النوع "+plan.patternType+" · الحالة "+plan.confirmationStatus+" · مستوى التأكيد "+fmt(plan.confirmation)+" · "+plan.confirmationDetail,
+  "القرار: "+plan.side+" · LONG "+fmt(plan.longScore,0)+"% (RAW "+fmt(plan.longRaw,0)+") · SHORT "+fmt(plan.shortScore,0)+"% (RAW "+fmt(plan.shortRaw,0)+") · الفارق "+fmt(Math.abs(plan.longScore-plan.shortScore),0)+" نقطة · "+plan.reason,
+  "حالة السوق: "+(plan.chop?"عرضي: "+plan.chopReason:"ليس عرضياً حسب مرشح النطاق")+(plan.counterTrend?" · الإشارة عكس اتجاه 4H":" · لا تعارض مع اتجاه 4H")+(plan.riskWarning?" · تحذير المخاطر: "+plan.riskWarning:""),
+  "POST-BREAK: "+(plan.postBreakType??"لا يوجد نوع نشط")+" · "+plan.postBreakStatus+" · المستوى "+(plan.postBreakLevel===null?"—":fmt(plan.postBreakLevel))+" · المتبقي "+plan.postBreakRemaining+" شمعة · "+plan.postBreakDetail
+ ];
+ const scoreReasons="عوامل LONG: "+(plan.longReasons.length?plan.longReasons.join("؛ "):"لا توجد عوامل مسجلة")+"\nعوامل SHORT: "+(plan.shortReasons.length?plan.shortReasons.join("؛ "):"لا توجد عوامل مسجلة");
+ const candleSnapshot="الشموع المغلقة الأخيرة:\n"+(reportCandleText||"غير متاحة")+"\n"+reportLiveText;
+ const trackerNow=breakTrackerRef.current;
+ const breakSnapshot="لقطة متعقب الكسر: "+(trackerNow.type??"لا يوجد")+" · الحالة "+(trackerNow.status??"—")+" · المستوى "+(trackerNow.level===null?"—":fmt(trackerNow.level))+" · "+(trackerNow.detail||"لا توجد متابعة نشطة");
+ interpretations.push("لقطة موحدة لحالة السوق وقت الحدث: "+marketSnapshot.join(" | "));
+ interpretations.push(scoreReasons);
+ figures.push(candleSnapshot);
+ figures.push(breakSnapshot);
+ const fullText="BTC RADAR · التقرير التحليلي الشامل\nالحدث: "+title+" ["+events.join(", ")+"]\nالوقت: "+new Date(timestamp).toLocaleString("ar")+" · الفريم: "+frame+" · السعر: "+fmt(price)+" USDT\n\n1) لقطة بيانات السوق والمؤشرات وقت الحدث:\n"+marketSnapshot.join("\n")+"\n\n2) الشموع الأخيرة:\n"+candleSnapshot+"\n\n3) أسباب نقاط LONG / SHORT:\n"+scoreReasons+"\n\n4) التعليل والسبب:\n"+reasons.join("\n")+"\n\n5) التفسير والأثر:\n"+interpretations.join("\n")+"\n\n6) الأرقام وتفاصيل الحدث:\n"+figures.join("\n")+"\n\n7) خطة المتابعة:\n"+followUps.join("\n");
  const id=frame+":"+candle.time+":"+events.join("|")+":"+timestamp;
- const report:EventReport={id,time:timestamp,frame,price,category,events,title,reason:reasons.join(" · "),interpretation:interpretations.join(" · "),figures:figures.join(" · "),followUp:followUps.join(" · "),fullText};
+ const report:EventReport={id,time:timestamp,frame,price,category,events,title,reason:reasons.join(" · "),interpretation:interpretations.join(" · "),figures:figures.join(" · "),followUp:followUps.join(" · "),fullText}; 
  const next=[report,...eventReports].slice(0,100);
  setEventReports(next);
  try{localStorage.setItem("btc-radar-event-reports-v1",JSON.stringify(next));localStorage.setItem("btc-radar-event-dedupe-v1",JSON.stringify(Array.from(reportDedupeRef.current).slice(-250)));}catch{}
