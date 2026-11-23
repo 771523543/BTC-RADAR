@@ -1,3 +1,10 @@
+export const MODES = {
+  conservative: { threshold: 0.70, minDiff: 25, label: "حذر" },
+  balanced: { threshold: 0.60, minDiff: 15, label: "متوازن" },
+  scalper: { threshold: 0.55, minDiff: 10, label: "مضارب" },
+} as const;
+export type TradingMode = keyof typeof MODES;
+
 export type Market = "spot" | "futures";
 export type Interval = "1m" | "5m" | "15m" | "1h" | "4h" | "1d";
 export type Candle = { time: number; closeTime: number; open: number; high: number; low: number; close: number; volume: number };
