@@ -213,6 +213,7 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker):Plan{
  const postBreakBandLow=postBreakActive?tracker.level!-proximityBand:null,postBreakBandHigh=postBreakActive?tracker.level!+proximityBand:null;
  const postBreakInvalidation=postBreakActive?(tracker.type==="BROKEN_RESISTANCE"?tracker.level!-buffer:tracker.level!+buffer):null;
  const liveTouchesReference=postBreakActive&&liveCandle.low<=tracker.level!+proximityBand&&liveCandle.high>=tracker.level!-proximityBand;
+ const closedTouchesReference=postBreakActive&&last.low<=tracker.level!+proximityBand&&last.high>=tracker.level!-proximityBand;
  const postBreakElapsed=postBreakActive?Math.max(0,12-tracker.remaining):0,postBreakWindow=12;
  const postBreakVolumeRatio=postBreakActive?volRatio:0;
  const wickRatio=(z:C,side:"upper"|"lower")=>{const range=Math.max(z.high-z.low,1e-12),wick=side==="upper"?z.high-Math.max(z.open,z.close):Math.min(z.open,z.close)-z.low;return wick/range;};
@@ -221,8 +222,8 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker):Plan{
  const postBreakSweep=postBreakActive?(tracker.type==="BROKEN_RESISTANCE"?(sweepHigh||resistanceSweep?"سحب سيولة أعلى المنطقة مرصود":"لا يوجد Sweep مؤكد"):(sweepLow||supportSweep?"سحب سيولة أسفل المنطقة مرصود":"لا يوجد Sweep مؤكد")):"غير متاح";
  const postBreakVolumeState=postBreakActive?(volRatio>=1.5?"قوي ≥1.50×":volRatio>=1.05?"داعم ≥1.05×":volRatio>0?"ضعيف <1.05×":"غير متاح"):"غير متاح";
  const postBreakConfirmation=postBreakActive?(tracker.status==="instant"?"لحظي غير مؤكد":tracker.status==="confirmed"||tracker.status==="retest"||tracker.status==="retest-confirmed"||tracker.status==="retest-bounce"||tracker.status==="retest-rejection"?"مؤكد بإغلاق شمعة":"إغلاق عكسي / منتهٍ"):"لا يوجد حدث نشط";
- const postBreakTrend4=postBreakActive&&(tracker.type==="BROKEN_RESISTANCE"?trendUp(s.trend4h):trendDown(s.trend4h));
- const postBreakTrend1=postBreakActive&&(tracker.type==="BROKEN_RESISTANCE"?trendUp(s.trend1h):trendDown(s.trend1h));
+ const postBreakTrend4=postBreakActive&&(tracker.type==="BROKEN_RESISTANCE"?s.trend4h.direction==="صاعد":s.trend4h.direction==="هابط");
+ const postBreakTrend1=postBreakActive&&(tracker.type==="BROKEN_RESISTANCE"?s.trend1h.direction==="صاعد":s.trend1h.direction==="هابط");
  const lastThree=c.slice(-3),candleAlignment=postBreakActive?lastThree.filter(z=>tracker.type==="BROKEN_RESISTANCE"?z.close>z.open:z.close<z.open).length:0;
  const closeBeyondReference=postBreakActive&&(tracker.type==="BROKEN_RESISTANCE"?last.close>tracker.level!+buffer:last.close<tracker.level!-buffer);
  const reverseClose=postBreakActive&&(tracker.type==="BROKEN_RESISTANCE"?last.close<tracker.level!-buffer:last.close>tracker.level!+buffer);
