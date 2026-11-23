@@ -1,8 +1,12 @@
-name: Deploy BTC RADAR to GitHub Pages
+name: Deploy BTC RADAR Next.js app to GitHub Pages
 
 on:
   push:
     branches: [main]
+    paths:
+      - "next-app/**"
+      - ".github/workflows/deploy.yml"
+      - "btc-weights.json"
   workflow_dispatch:
 
 permissions:
@@ -15,18 +19,37 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout latest main
         uses: actions/checkout@v4
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
-      # Publish index.html, btc-ai-engine.js, and btc-weights.json from repository root.
-      - name: Upload root static site
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: next-app/package.json
+      - name: Install dependencies
+        working-directory: next-app
+        run: npm install
+      - name: Include trained BTC weights as a public asset
+        run: cp btc-weights.json next-app/public/btc-weights.json
+      - name: Build and export latest Next.js app
+        working-directory: next-app
+        run: npm run build
+      - name: Upload Next.js static export
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: next-app/out
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
