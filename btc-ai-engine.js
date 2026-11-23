@@ -5,6 +5,27 @@ const clamp=(v,min=0,max=1)=>Math.min(max,Math.max(min,v));
 const mean=a=>a.length?a.reduce((s,v)=>s+v,0)/a.length:0;
 const sigmoid=x=>1/(1+Math.exp(-clamp(x,-20,20)));
 const valid=n=>Number.isFinite(n);
+let REAL_WEIGHTS = null;
+const WEIGHTS_READY = fetch('./btc-weights.json', { cache: 'no-store' })
+  .then(response => {
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    return response.json();
+  })
+  .then(data => {
+    if (!data || data.symbol !== 'BTCUSDT' || data.timeframe !== '15m' ||
+        !data.weights || typeof data.weights !== 'object') {
+      throw new Error('ملف الأوزان لا يطابق BTCUSDT / 15m');
+    }
+    REAL_WEIGHTS = data;
+    console.info('BTC AI: تم تحميل أوزان BTCUSDT المدربة من btc-weights.json');
+    return REAL_WEIGHTS;
+  })
+  .catch(error => {
+    REAL_WEIGHTS = null;
+    console.warn('BTC AI: تعذر تحميل الأوزان المدربة؛ سيتم استخدام القواعد التقديرية مؤقتاً.', error);
+    return null;
+  });
+
 const closesOf=c=>c.map(x=>Number(x.close));
 function ema(values,period){
   if(values.length<period)return null;
@@ -93,15 +114,52 @@ function kelly(winRate){
   const full=Math.max(0,(b*p-(1-p))/b);
   return Math.min(.02,full*.5);
 }
+function weightedRealEnsemble(f){
+  if(!REAL_WEIGHTS?.weights)return null;
+  const raw={
+    rsi_14:(f.rsi14-50)/50,
+    macd:f.macd/(f.price||1),
+    macd_hist:f.macdHistogram/(f.price||1),
+    dist_ema_20:f.price/f.ema20-1,
+    dist_ema_50:f.price/f.ema50-1,
+    dist_ema_200:f.price/f.ema200-1,
+    bb_pos:(f.price-f.bollinger.lower)/Math.max(1e-12,f.bollinger.upper-f.bollinger.lower),
+    atr_pct:f.atr14/(f.price||1),
+    ret_1:f.returns.ret1||0,
+    ret_5:f.returns.ret5||0,
+    ret_10:f.returns.ret10||0,
+    ret_20:f.returns.ret20||0,
+    vol_ratio:f.volumeRatio||1,
+    is_london:f.session==='لندن'?1:0,
+    is_ny:f.session==='نيويورك'?1:0,
+    is_asia:f.session==='آسيا'?1:0
+  };
+  const stats=REAL_WEIGHTS.feature_stats||{};
+  let total=0,used=0;
+  for(const [name,weightValue] of Object.entries(REAL_WEIGHTS.weights)){
+    const weight=Number(weightValue),value=Number(raw[name]);
+    if(!Number.isFinite(weight)||!Number.isFinite(value))continue;
+    let directional=value;
+    if(name==='bb_pos')directional=value-.5;
+    else if(name==='vol_ratio')directional=(value-1)*(f.candle.body>=0?1:-1);
+    else if(name==='atr_pct'||name.startsWith('is_'))directional=0;
+    const stat=stats[name];
+    const z=stat&&Number(stat.std)>0?(directional-Number(stat.mean||0))/Number(stat.std):directional;
+    total+=weight*Math.tanh(clamp(z,-5,5)/2);
+    used+=weight;
+  }
+  if(!used)return null;
+  return clamp(sigmoid(2.2*(total/used-.0)));
+}
 function analyze(candles,capital=10000){
   const f=buildFeatures(candles);
   const lgbm=model_LGBM(f),cat=model_CatBoost(f),lstm=model_LSTM(f);
-  const ensemble=lgbm*.35+cat*.35+lstm*.30;
+  const realEnsemble=weightedRealEnsemble(f);\n  const ensemble=realEnsemble===null?lgbm*.35+cat*.35+lstm*.30:realEnsemble;
   const mc=monteCarlo(f.price,f.atr14||f.price*.001);
   const winRate=clamp(.5+(ensemble-.5)*.75);
   const kellyFraction=kelly(winRate);
   const decision=ensemble>.70&&mc.upProbability>.60?'BUY':'WAIT';
-  return{decision,ensemble,models:{LGBM:lgbm,CatBoost:cat,LSTM:lstm},monteCarlo:mc,kelly:{winRate,fraction:kellyFraction,percent:kellyFraction*100,capitalRisk:Math.max(0,Number(capital)||0)*kellyFraction},features:f,capital:Number(capital)||0,modelType:'heuristic-proxy',timestamp:Date.now()};
+  return{decision,ensemble,models:{LGBM:lgbm,CatBoost:cat,LSTM:lstm},monteCarlo:mc,kelly:{winRate,fraction:kellyFraction,percent:kellyFraction*100,capitalRisk:Math.max(0,Number(capital)||0)*kellyFraction},features:f,capital:Number(capital)||0,modelType:realEnsemble===null?'heuristic-proxy':'trained-feature-weights',weightsSource:realEnsemble===null?'تقديرية':'مدربة حقيقية',timestamp:Date.now()};
 }
 function renderCard(result,targetId){
   const el=document.getElementById(targetId);if(!el||!result)return;
@@ -137,8 +195,8 @@ function renderCard(result,targetId){
       <div class="ai-metric"><span>الجلسة الحالية</span><b>${f.session}</b></div>
       <div class="ai-metric"><span>قيمة المخاطرة النظرية</span><b>${money(result.kelly.capitalRisk)} USDT</b></div>
     </div>
-    <p class="ai-foot">محاكاة Monte Carlo: ${result.monteCarlo.simulations} مسارًا × ${result.monteCarlo.horizon} خطوة. التنفيذ الحالي نماذج تقريبية قائمة على قواعد ومؤشرات، وليس نماذج LGBM/CatBoost/LSTM مدرّبة. للتعليم فقط، ليست توصية استثمارية.</p>
+    <p class="ai-foot">الأوزان: ${result.weightsSource||'تقديرية'}. محاكاة Monte Carlo: ${result.monteCarlo.simulations} مسارًا × ${result.monteCarlo.horizon} خطوة. أوزان الميزات مستخرجة من تدريب LightGBM وCatBoost؛ لا تتضمن حزمة المتصفح ملفات النموذج الأصلية. للتعليم فقط، ليست توصية استثمارية.</p>
   </article>`;
 }
-window.BTC_AI={buildFeatures,model_LGBM,model_CatBoost,model_LSTM,monteCarlo,kelly,analyze,renderCard};
+window.BTC_AI={buildFeatures,model_LGBM,model_CatBoost,model_LSTM,monteCarlo,kelly,analyze,renderCard,ready:WEIGHTS_READY,get weights(){return REAL_WEIGHTS;}};
 })();
