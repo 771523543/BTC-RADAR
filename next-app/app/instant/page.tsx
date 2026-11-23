@@ -101,7 +101,7 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker,trainedWeights:TrainedW
    dist_ema_200:last.close/(ema200Series.at(-1)||last.close)-1,
    bb_pos:bbStd>0?(last.close-(bbMean-2*bbStd))/(4*bbStd):.5,
    atr_pct:a/last.close,ret_1:closes.length>1?last.close/closes[closes.length-2]-1:0,
-   ret_5:closes.length>5?last.close/closes.length>5?last.close/closes[closes.length-6]-1:0:0,
+   ret_5:closes.length>5?last.close/closes[closes.length-6]-1:0,
    ret_10:closes.length>10?last.close/closes[closes.length-11]-1:0,
    ret_20:closes.length>20?last.close/closes[closes.length-21]-1:0,
    vol_ratio:volAverage>0?last.volume/volAverage:0,
