@@ -28,7 +28,7 @@ BATCH = 1000
 CONFIDENCE = 0.70
 HORIZON = 3
 TARGET_RETURN = 0.003
-BINANCE_URL = "https://api.binance.com/api/v3/klines"
+BINANCE_URL = "https://data-api.binance.vision/api/v3/klines"
 FEATURES = [
     "rsi_14", "macd", "macd_hist", "dist_ema_20", "dist_ema_50",
     "dist_ema_200", "bb_pos", "atr_pct", "ret_1", "ret_5", "ret_10",
