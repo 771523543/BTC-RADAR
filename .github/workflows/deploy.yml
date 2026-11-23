@@ -15,36 +15,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: next-app
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: next-app/package.json
-      - name: Install dependencies
-        run: npm install
-      - name: Build static Next.js site
-        run: npm run build
-      - name: Upload Pages artifact
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload root static site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: next-app/out
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
+          path: .
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
