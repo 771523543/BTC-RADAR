@@ -22,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
-      - name: Upload root static site
+      # Publish index.html, btc-ai-engine.js, and btc-weights.json from repository root.\n      - name: Upload root static site
         uses: actions/upload-pages-artifact@v3
         with:
           path: .
