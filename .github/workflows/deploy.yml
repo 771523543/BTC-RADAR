@@ -1,3 +1,4 @@
+# Trigger scoring-balance deployment
 # Trigger a fresh Pages deployment of the restored main snapshot.
 name: Deploy BTC RADAR Next.js app to GitHub Pages
 
