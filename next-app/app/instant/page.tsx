@@ -378,7 +378,8 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker,trainedWeights:TrainedW
   const breakAligned=finalSide==="LONG"?(tracker.type==="BROKEN_RESISTANCE"&&["retest-confirmed","retest-bounce"].includes(tracker.status??"")):(tracker.type==="BROKEN_SUPPORT"&&["retest-confirmed","retest-rejection"].includes(tracker.status??""));
   const trend4Aligned=finalSide==="LONG"?s.trend4h.direction==="صاعد":s.trend4h.direction==="هابط";
   const trend1Aligned=finalSide==="LONG"?s.trend1h.direction==="صاعد":s.trend1h.direction==="هابط";
-  const dynamicRisk=finalSide==="NO TRADE"?0:breakAligned&&postBreakQuality>=75&&volRatio>=1.2&&trend4Aligned&&trend1Aligned&&!lowLiquidity&&!chop?1.5:breakAligned&&postBreakQuality>=55&&volRatio>=1&&(trend4Aligned||trend1Aligned)&&!lowLiquidity&&!chop?1:0.5;
+  const riskTier=finalSide==="NO TRADE"?0:breakAligned&&postBreakQuality>=75&&volRatio>=1.2&&trend4Aligned&&trend1Aligned&&!lowLiquidity&&!chop?1.5:breakAligned&&postBreakQuality>=55&&volRatio>=1&&(trend4Aligned||trend1Aligned)&&!lowLiquidity&&!chop?1:0.5;
+  const dynamicRisk=Math.min(modeConfig.riskCap,riskTier);
   const evaluation:Evaluation={decision:finalSide,longPct:longScore,shortPct:shortScore,gapPoints:gap,minimumScore:Math.round(modeConfig.threshold*100),minimumGapPoints:modeConfig.minDiff,mode,riskPercent:dynamicRisk,entry:finalSide==="NO TRADE"?0:entry,sl:finalSide==="NO TRADE"?0:sl,tp1:finalSide==="NO TRADE"?0:tp1,tp2:finalSide==="NO TRADE"?0:tp2,riskDistance:finalSide==="NO TRADE"?0:riskDistance,rewardRiskRatio:finalSide==="NO TRADE"?0:2.5,activationPassed:finalSide!=="NO TRADE"};
  // FINAL SIGNAL analytics: derived layers are explanatory only and never override the core activation gate.
  const clampPct=(v:number)=>Math.round(Math.max(0,Math.min(100,Number.isFinite(v)?v:0)));
