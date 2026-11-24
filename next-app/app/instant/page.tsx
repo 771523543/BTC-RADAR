@@ -301,38 +301,52 @@ function analyze(s:Data,frame:Frame,tracker:BreakTracker,trainedWeights:TrainedW
  const dead=!Number.isFinite(a)||a/entry*100<.08,lowLiquidity=volRatio<.7&&!sweepLow&&!sweepHigh;
  const oiBull=s.oiDelta!==null&&s.oiDelta>0,oiBear=s.oiDelta!==null&&s.oiDelta<0;
  const score=(direction:"LONG"|"SHORT")=>{
-  let points=0;const parts:string[]=[];
+  let positive=0,trendPenalty=0,marketPenalty=0,momentumPenalty=0,flowPenalty=0;
+  const parts:string[]=[];
+  const add=(value:number,label:string)=>{positive+=value;parts.push(label+" +"+value);};
   const h4=direction==="LONG"?trendUp(s.trend4h):trendDown(s.trend4h),h1=direction==="LONG"?trendUp(s.trend1h):trendDown(s.trend1h);
   const h4Against=direction==="LONG"?trendDown(s.trend4h):trendUp(s.trend4h),h1Against=direction==="LONG"?trendDown(s.trend1h):trendUp(s.trend1h);
-  if(h4){points+=20;parts.push("4H موافق +20");}else if(h4Against){points-=12;parts.push("4H معاكس −12");}else parts.push("4H محايد +0");
-  if(h1){points+=15;parts.push("1H موافق +15");}else if(h1Against){points-=10;parts.push("1H معاكس −10");}else parts.push("1H محايد +0");
+  if(h4)add(20,"4H موافق");else if(h4Against){trendPenalty+=12;parts.push("4H معاكس −12");}else parts.push("4H محايد +0");
+  if(h1)add(15,"1H موافق");else if(h1Against){trendPenalty+=10;parts.push("1H معاكس −10");}else parts.push("1H محايد +0");
+  // Opposing higher-timeframe signals are correlated: cap their combined deduction.
+  trendPenalty=Math.min(15,trendPenalty);
   const bounce=direction==="LONG"?supportScoreEvidence:resistanceScoreEvidence,breakout=direction==="LONG"?breakoutConfirmed:breakdownConfirmed,sweep=direction==="LONG"?supportSweep:resistanceSweep;
   const candleDirection=direction==="LONG"?last.close>last.open:last.close<last.open;
-  if(breakout){points+=25;parts.push("كسر/اختراق حقيقي مع هامش ATR +25");}
-  else if(sweep){points+=17;parts.push("Liquidity Sweep واضح +17");}
-  else if(bounce){points+=16;parts.push(direction==="LONG"?"ارتداد/تماسك دعم +16":"رفض/تماسك مقاومة +16");}
-  else {points-=5;parts.push("لا تأكيد من مستوى فني −5");}
-  if(rangeSqueeze){points-=12;parts.push("انضغاط النطاق −12");}
-  else if(rangeExpansion&&candleDirection){points+=8;parts.push("توسع نطاق مع فوليوم ≥1.1× +8");}
-  if(emaExtended&&((entry>e20&&direction==="LONG")||(entry<e20&&direction==="SHORT"))){points-=12;parts.push("تمدد عن EMA20 في اتجاه الصفقة −12");}
+  if(breakout)add(25,"كسر/اختراق حقيقي مع هامش ATR");
+  else if(sweep)add(17,"Liquidity Sweep واضح");
+  else if(bounce)add(16,direction==="LONG"?"ارتداد/تماسك دعم":"رفض/تماسك مقاومة");
+  else {marketPenalty+=5;parts.push("لا تأكيد من مستوى فني −5");}
+  if(rangeSqueeze){marketPenalty+=12;parts.push("انضغاط النطاق −12");}
+  else if(rangeExpansion&&candleDirection)add(8,"توسع نطاق مع فوليوم ≥1.1×");
+  if(emaExtended&&((entry>e20&&direction==="LONG")||(entry<e20&&direction==="SHORT"))){marketPenalty+=12;parts.push("تمدد عن EMA20 في اتجاه الصفقة −12");}
+  // Avoid stacking several descriptions of the same adverse market structure.
+  marketPenalty=Math.min(15,marketPenalty);
   const rsiGood=direction==="LONG"?rv>=52&&rv<=70:rv<=48&&rv>=30,rsiBad=direction==="LONG"?rv>78||rv<38:rv<22||rv>62;
-  if(rsiGood){points+=10;parts.push("RSI بزخم ملائم +10");}else if(rsiBad){points-=8;parts.push("RSI متطرف/معاكس −8");}else parts.push("RSI دون تعزيز +0");
-  if(volRatio>=1.15&&candleDirection){points+=10;parts.push("حجم واتجاه شمعة مؤيدان +10");}else if(volRatio<.7){points-=10;parts.push("فوليوم ضعيف −10");}else if(volRatio>=1.15){points-=4;parts.push("حجم مرتفع دون اتجاه مؤيد −4");}
+  if(rsiGood)add(10,"RSI بزخم ملائم");else if(rsiBad){momentumPenalty+=8;parts.push("RSI متطرف/معاكس −8");}else parts.push("RSI دون تعزيز +0");
+  if(volRatio>=1.15&&candleDirection)add(10,"حجم واتجاه شمعة مؤيدان");
+  else if(volRatio<.7){flowPenalty+=10;parts.push("فوليوم ضعيف −10");}
+  else if(volRatio>=1.15){momentumPenalty+=4;parts.push("حجم مرتفع دون اتجاه مؤيد −4");}
   const oiAligned=direction==="LONG"?oiBull:oiBear,oiOpposite=direction==="LONG"?oiBear:oiBull;
-  if(oiAligned){points+=10;parts.push("اتجاه Open Interest داعم +10");}else if(oiOpposite){points-=5;parts.push("اتجاه Open Interest تحذيري −5");}else parts.push("اتجاه OI غير حاسم +0");
+  if(oiAligned)add(10,"اتجاه Open Interest داعم");else if(oiOpposite){flowPenalty+=5;parts.push("اتجاه Open Interest تحذيري −5");}else parts.push("اتجاه OI غير حاسم +0");
   const fundingAligned=direction==="LONG"?fundBull:fundBear,fundingOpposite=direction==="LONG"?fundBear:fundBull;
-  if(fundingAligned){points+=5;parts.push("Funding داعم +5");}else if(fundingOpposite){points-=4;parts.push("Funding مزدحم/معاكس −4");}else parts.push("Funding محايد +0");
+  if(fundingAligned)add(5,"Funding داعم");else if(fundingOpposite){flowPenalty+=4;parts.push("Funding مزدحم/معاكس −4");}else parts.push("Funding محايد +0");
+  // Derivatives and weak-volume deductions share one capped flow bucket.
+  flowPenalty=Math.min(10,flowPenalty);
   const patternAligned=(direction==="LONG"&&pat.kind==="bull")||(direction==="SHORT"&&pat.kind==="bear");
-  if(patternAligned&&pat.status==="confirmed"&&pat.score>0){const patternPoints=Math.round(pat.score);points+=patternPoints;parts.push("نموذج "+pat.name+" · مؤكد · "+(pat.volumeConfirmed?"فوليوم مؤيد":"فوليوم غير كافٍ")+" +"+patternPoints);}
+  if(patternAligned&&pat.status==="confirmed"&&pat.score>0)add(Math.round(pat.score),"نموذج "+pat.name+" · مؤكد · "+(pat.volumeConfirmed?"فوليوم مؤيد":"فوليوم غير كافٍ"));
   else if(patternAligned&&(pat.status==="weak"||pat.status==="pending"))parts.push("نموذج "+pat.name+" · "+(pat.status==="weak"?"ضعيف السياق":"غير مؤكد")+": 0 نقطة");
   else if(pat.type==="حيرة")parts.push("شمعة حيرة: انتظار تأكيد دون نقاط اتجاهية");
   const postBreakImpact=direction==="LONG"?breakImpactLong:breakImpactShort;
-  if(postBreakImpact){points+=postBreakImpact;parts.push("رادار ما بعد الكسر "+(postBreakImpact===20?"إعادة اختبار مؤكدة":"إعادة اختبار قيد التأكيد")+" +"+postBreakImpact);}
+  if(postBreakImpact)add(postBreakImpact,"رادار ما بعد الكسر · أثر الحدث");
   const learnedAdjustment=frame==="15m"&&trainedWeights?(direction==="LONG"?trainedWeightAdjustment:-trainedWeightAdjustment):0;
-  if(learnedAdjustment!==0){points+=learnedAdjustment;parts.push("انحياز ميزات BTC المدربة "+(learnedAdjustment>0?"+":"")+learnedAdjustment+" نقطة · تأثير محدود وليس تنبؤ نموذج");}
-  const totalPoints=Number.isFinite(points)?points:0;
+  if(learnedAdjustment>0)add(learnedAdjustment,"انحياز ميزات BTC المدربة");
+  else if(learnedAdjustment<0){momentumPenalty+=Math.abs(learnedAdjustment);parts.push("انحياز ميزات BTC المدربة "+learnedAdjustment);}
+  momentumPenalty=Math.min(10,momentumPenalty);
+  const deductions=trendPenalty+marketPenalty+momentumPenalty+flowPenalty;
+  if(deductions>0)parts.push("إجمالي الخصومات بعد موازنة الفئات −"+deductions+" (اتجاه "+trendPenalty+" · بنية السوق "+marketPenalty+" · زخم "+momentumPenalty+" · سيولة/مشتقات "+flowPenalty+")");
+  const totalPoints=Number.isFinite(positive-deductions)?positive-deductions:0;
   const finalScore=Math.round(Math.min(100,Math.max(0,totalPoints)));
-  return{value:finalScore,totalPoints,parts,postBreakImpact};
+  return{value:finalScore,totalPoints,positivePoints:positive,deductions,parts,postBreakImpact};
  };
  const ls=score("LONG"),ss=score("SHORT"),longScore=ls.value,shortScore=ss.value;
  const higher=Math.max(longScore,shortScore),gap=Math.abs(longScore-shortScore),candidate:Side=longScore>shortScore?"LONG":"SHORT";
