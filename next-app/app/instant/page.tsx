@@ -455,6 +455,11 @@ const candleReadout=useMemo(()=>{
 useEffect(()=>{try{const raw=localStorage.getItem("btc-radar-event-reports-v1");if(raw){const parsed=JSON.parse(raw);if(Array.isArray(parsed))setEventReports(parsed.slice(0,100));}const keys=localStorage.getItem("btc-radar-event-dedupe-v1");if(keys){const parsed=JSON.parse(keys);if(Array.isArray(parsed))reportDedupeRef.current=new Set(parsed.filter((x):x is string=>typeof x==="string"));}}catch{setEventReports([]);reportDedupeRef.current=new Set();}},[]);
 useEffect(()=>{try{const raw=localStorage.getItem("btc-radar-signal-log-v1");if(raw){const parsed=JSON.parse(raw);if(Array.isArray(parsed)){const migrated=parsed.slice(0,500).filter((x:any)=>x&&typeof x==="object").map((x:any)=>{const snapshot=x.snapshot&&typeof x.snapshot==="object"?x.snapshot:{volumeRatio:0,longScore:0,shortScore:0,trend1h:"—",trend4h:"—",support:null,resistance:null};const normalized={...x,snapshot};return normalized.status==="مفتوحة"&&(!Number.isFinite(normalized.qty)||normalized.qty<=0)?{...normalized,status:"إشارة قديمة · لم تُنفذ"}:normalized;});setSignalLog(migrated);if(JSON.stringify(migrated)!==JSON.stringify(parsed))localStorage.setItem("btc-radar-signal-log-v1",JSON.stringify(migrated));}}}catch{setSignalLog([]);}},[]);
 useEffect(()=>{
+ const syncSignalLog=()=>{try{const raw=localStorage.getItem("btc-radar-signal-log-v1");const parsed=raw?JSON.parse(raw):[];if(Array.isArray(parsed))setSignalLog(parsed.slice(0,500));}catch{}};
+ window.addEventListener("btc-radar-paper-trades-updated",syncSignalLog);
+ return()=>window.removeEventListener("btc-radar-paper-trades-updated",syncSignalLog);
+},[]);
+useEffect(()=>{
   if(!plan||!data||!tradeable||!data.candles.length||plan.side==="NO TRADE"||!plan.finalSignalMetrics.core.activation.passed)return;
   const candle=data.candles[data.candles.length-1],id=frame+":"+candle.time;
   if(lastLoggedRef.current===id)return;
@@ -479,24 +484,6 @@ useEffect(()=>{
   try{localStorage.setItem("btc-radar-signal-log-v1",JSON.stringify(next));window.dispatchEvent(new Event("btc-radar-paper-trades-updated"));}catch{}
   setSignalLog(next);
  },[plan,data,tradeable,frame,sessionCapital,riskPercent,livePrice]);
-useEffect(()=>{
-  const price=livePrice&&livePrice>0?livePrice:data?.price;
-  if(!price||!signalLog.length)return;
-  const next=signalLog.map(x=>{
-   if(x.status!=="مفتوحة")return x;
-   const hitSl=x.side==="LONG"?price<=x.sl:price>=x.sl;
-   const hitTp=x.side==="LONG"?price>=x.tp1:price<=x.tp1;
-   if(!hitSl&&!hitTp)return x;
-   // If the live feed jumps across both levels between updates, record the conservative stop-first outcome.
-   const closePrice=hitSl?x.sl:x.tp1,grossPnl=(x.side==="LONG"?closePrice-x.entry:x.entry-closePrice)*x.qty,fees=x.qty*(x.entry+closePrice)*.001,pnl=grossPnl-fees;
-   return {...x,status:hitSl?"ضرب الوقف SL ❌" as const:"حقق الهدف TP1 ✅" as const,closedAt:Date.now(),closePrice,pnl,fees};
-  });
-  if(next.some((x,i)=>x.status!==signalLog[i]?.status)){
-   setSignalLog(next);
-   try{localStorage.setItem("btc-radar-signal-log-v1",JSON.stringify(next));window.dispatchEvent(new Event("btc-radar-paper-trades-updated"));}catch{}
-  }
- },[livePrice,data?.price,signalLog]);
-
 useEffect(()=>{
  if(!data||!plan)return;
  const candle=data.candles[data.candles.length-1];if(!candle)return;
