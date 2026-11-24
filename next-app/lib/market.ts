@@ -1,7 +1,7 @@
 export const MODES = {
-  conservative: { threshold: 0.70, minDiff: 25, label: "حذر" },
-  balanced: { threshold: 0.60, minDiff: 15, label: "متوازن" },
-  scalper: { threshold: 0.55, minDiff: 10, label: "مضارب" },
+  conservative: { threshold: 0.70, minDiff: 25, riskCap: 0.5, label: "حذر" },
+  balanced: { threshold: 0.60, minDiff: 15, riskCap: 1.0, label: "متوازن" },
+  scalper: { threshold: 0.55, minDiff: 10, riskCap: 1.5, label: "مضارب" },
 } as const;
 export type TradingMode = keyof typeof MODES;
 
